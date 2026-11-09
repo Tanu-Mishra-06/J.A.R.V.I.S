@@ -1,0 +1,3 @@
+timestamp,service_name,host_name,metric_name,metric_value,unit
+2026-11-09T10:00:00Z,cache-01,host-c1,eviction_rate,88.4,ops
+2026-11-09T10:01:00Z,cache-01,host-c1,eviction_rate,94.2,ops

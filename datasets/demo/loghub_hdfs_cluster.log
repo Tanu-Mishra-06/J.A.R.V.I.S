@@ -1,0 +1,152 @@
+261109 100000 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_3363629219 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100000 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_9807209816 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100000 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_4590711152 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100000 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_5161807235 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100100 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_4645120421 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100100 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_6009268066 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100100 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_7380780055 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100100 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_1251837136 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100200 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_2627677155 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100200 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_9526836552 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100200 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_7249213370 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100200 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_8380507338 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100300 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_1664847319 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100300 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_2274350418 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100300 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_5160575046 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100300 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_3328710672 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100400 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_8507497883 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100400 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_1245522987 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100400 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_7803990970 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100400 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_1676168421 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100500 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_1798112150 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100500 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_3555656321 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100500 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_6305160342 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100500 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_3553440342 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100600 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_3660223333 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100600 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_7540301973 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100600 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_9309500117 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100600 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_8370987661 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100700 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_6320115677 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100700 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_2699887270 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100700 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_6583444930 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100700 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_1311570307 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100800 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_5278201677 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100800 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_9904586976 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100800 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_2139027119 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100800 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_9303285822 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100900 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_4783282817 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100900 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_4776436931 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100900 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_6882074066 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 100900 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_5972484792 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101000 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_8316648259 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101000 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_9623534576 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101000 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_3849232839 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101000 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_5871743247 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101100 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_3376077463 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101100 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_6464693977 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101100 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_3597724331 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101100 142 INFO dfs.DataNode$BlockReceiver: Receiving block blk_8377088167 src: /10.251.43.115:52012 dest: /10.251.43.115:50010
+261109 101200 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_7393195616 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101200 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101200 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4633987776 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101200 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101200 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_9986353481 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101200 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101200 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_2188332531 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101200 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101300 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_5310195918 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101300 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101300 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4311931853 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101300 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101300 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_2125089309 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101300 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101300 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_8478529823 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101300 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101400 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_1041531046 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101400 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101400 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4882343658 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101400 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101400 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_3343292475 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101400 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101400 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_8879525611 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101400 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101500 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_5931025271 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101500 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101500 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_1547374338 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101500 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101500 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_6618926823 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101500 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101500 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4696689457 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101500 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101600 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_9155819200 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101600 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101600 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_5736462531 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101600 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101600 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4993808565 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101600 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101600 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4713453204 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101600 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101700 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4482238042 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101700 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101700 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_9080621072 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101700 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101700 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_1106456634 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101700 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101700 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_9292791081 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101700 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101800 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4482141802 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101800 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101800 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_2145921803 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101800 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101800 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_5759234471 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101800 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101800 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4745927824 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101800 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101900 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_8982597239 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101900 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101900 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_1955345537 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101900 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101900 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_7271954644 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101900 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 101900 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_1977515194 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 101900 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102000 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_9691572571 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102000 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102000 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_6124453431 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102000 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102000 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_6704841644 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102000 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102000 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4712367625 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102000 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102100 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_6493800024 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102100 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102100 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_7597996327 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102100 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102100 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_5033992825 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102100 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102100 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_9462806178 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102100 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102200 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_2140169349 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102200 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102200 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_7161404428 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102200 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102200 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_6642201119 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102200 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102200 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_3196545325 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102200 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102300 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_3476426797 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102300 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102300 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_2094024844 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102300 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102300 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_8339176912 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102300 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102300 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_9597198563 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102300 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102400 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_3880327491 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102400 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102400 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_6859286614 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102400 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102400 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_4642197907 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102400 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.
+261109 102400 987 ERROR dfs.DataNode$PacketResponder: PacketResponder 1 for block blk_7049001493 Interrupted: java.io.IOException: Premature EOF from inputStream
+261109 102400 988 FATAL dfs.FSNamesystem: Replication monitor heartbeat expired for DataNode /10.251.43.115:50010. Marking node as DEAD.

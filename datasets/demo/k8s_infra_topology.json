@@ -1,0 +1,45 @@
+{
+  "services": [
+    {
+      "name": "worker-node-01",
+      "type": "node",
+      "host": "k8s-w01",
+      "description": "Kubelet Worker Node 01"
+    },
+    {
+      "name": "coredns",
+      "type": "dns",
+      "host": "k8s-w01",
+      "description": "CoreDNS Cluster Domain Resolver"
+    },
+    {
+      "name": "kube-apiserver",
+      "type": "controlplane",
+      "host": "k8s-m01",
+      "description": "Kubernetes API Server"
+    },
+    {
+      "name": "ingress-nginx",
+      "type": "ingress",
+      "host": "k8s-w02",
+      "description": "NGINX Ingress Controller"
+    }
+  ],
+  "dependencies": [
+    {
+      "source": "coredns",
+      "target": "worker-node-01",
+      "latency_p95": 2.1
+    },
+    {
+      "source": "ingress-nginx",
+      "target": "coredns",
+      "latency_p95": 18.0
+    },
+    {
+      "source": "ingress-nginx",
+      "target": "kube-apiserver",
+      "latency_p95": 12.0
+    }
+  ]
+}

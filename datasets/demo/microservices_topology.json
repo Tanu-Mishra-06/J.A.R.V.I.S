@@ -1,0 +1,72 @@
+{
+  "services": [
+    {
+      "name": "api-gateway",
+      "type": "gateway",
+      "host": "gw-node-01",
+      "description": "Cloud API Gateway"
+    },
+    {
+      "name": "auth-service",
+      "type": "web",
+      "host": "auth-node-01",
+      "description": "OAuth & JWT Token Authority"
+    },
+    {
+      "name": "order-service",
+      "type": "web",
+      "host": "order-node-01",
+      "description": "Core Business Order Service"
+    },
+    {
+      "name": "inventory-service",
+      "type": "web",
+      "host": "inv-node-01",
+      "description": "Warehouse & Stock Manager"
+    },
+    {
+      "name": "database-primary",
+      "type": "database",
+      "host": "db-node-01",
+      "description": "PostgreSQL Primary Cluster"
+    },
+    {
+      "name": "redis-cache",
+      "type": "cache",
+      "host": "cache-node-01",
+      "description": "In-memory Redis Cluster"
+    }
+  ],
+  "dependencies": [
+    {
+      "source": "api-gateway",
+      "target": "auth-service",
+      "latency_p95": 14.5
+    },
+    {
+      "source": "api-gateway",
+      "target": "order-service",
+      "latency_p95": 28.2
+    },
+    {
+      "source": "order-service",
+      "target": "inventory-service",
+      "latency_p95": 22.0
+    },
+    {
+      "source": "order-service",
+      "target": "database-primary",
+      "latency_p95": 8.5
+    },
+    {
+      "source": "auth-service",
+      "target": "redis-cache",
+      "latency_p95": 3.2
+    },
+    {
+      "source": "auth-service",
+      "target": "database-primary",
+      "latency_p95": 9.1
+    }
+  ]
+}

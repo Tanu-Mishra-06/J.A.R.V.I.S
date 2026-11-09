@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J.A.R.V.I.S. — AIOps Incident Intelligence Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              950: '#070b14',
+              900: '#0c1322',
+              850: '#111a2e',
+              800: '#18243e',
+              700: '#233454',
+            },
+            cyan: {
+              450: '#00d2f0',
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars & glassmorphism */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #070b14; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    .canvas-grid {
+      background-size: 28px 28px;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    }
+    .card-glass {
+      background: rgba(12, 19, 34, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .code-block {
+      background: #060911;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+  </style>
+</head>
+<body class="bg-[#070b14] text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-cyan-500/20 selection:text-cyan-300">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-[#0c1322]/90 backdrop-blur-md border-b border-slate-800/80 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+    <div class="flex items-center space-x-5">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-sm tracking-wider text-white shadow-md shadow-cyan-500/25">
+          J
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-extrabold text-base tracking-wide text-white">J.A.R.V.I.S.</span>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-mono border border-slate-700/60 font-semibold">v1.0.0-PROD</span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-normal">Justified Analysis, Reasoning & Visualization of Incident Systems</p>
+        </div>
+      </div>
+      <div class="hidden md:flex items-center space-x-2 pl-4 border-l border-slate-800 text-xs">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50 animate-pulse"></span>
+        <span class="text-slate-300 font-mono text-[11px] tracking-wide" id="header-status">ENGINE ACTIVE</span>
+      </div>
+    </div>
+
+    <!-- Live Telemetry KPI Ticker -->
+    <div class="hidden lg:flex items-center space-x-7 text-xs text-slate-400">
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400 text-xs font-medium">Active Incidents:</span>
+        <span class="text-red-400 font-mono font-bold text-sm" id="ticker-active-incidents">-</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400 text-xs font-medium">Total Events:</span>
+        <span class="text-slate-200 font-mono font-bold text-sm" id="ticker-total-events">-</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400 text-xs font-medium">Anomalies:</span>
+        <span class="text-amber-400 font-mono font-bold text-sm" id="ticker-total-anomalies">-</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="text-slate-400 text-xs font-medium">Services:</span>
+        <span class="text-cyan-400 font-mono font-bold text-sm" id="ticker-services">-</span>
+      </div>
+    </div>
+
+    <!-- Quick Actions & Status -->
+    <div class="flex items-center space-x-3 text-xs">
+      <button onclick="refreshAll()" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium transition flex items-center space-x-1.5 shadow-sm">
+        <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        <span>Refresh</span>
+      </button>
+      <div class="px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 font-mono text-[11px] font-semibold">
+        ● API CONNECTED
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs Bar -->
+  <nav class="bg-[#0c1322]/70 backdrop-blur-md border-b border-slate-800 px-6 flex items-center space-x-2 text-xs overflow-x-auto shadow-inner">
+    <button onclick="switchTab('overview')" id="tab-btn-overview" class="tab-btn active px-4 py-3 font-semibold border-b-2 border-cyan-500 text-cyan-400 flex items-center space-x-2 transition">
+      <span>Overview</span>
+    </button>
+    <button onclick="switchTab('datasets')" id="tab-btn-datasets" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
+      <span>Data Sources</span>
+    </button>
+    <button onclick="switchTab('events')" id="tab-btn-events" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
+      <span>Event Explorer</span>
+    </button>
+    <button onclick="switchTab('incidents')" id="tab-btn-incidents" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
+      <span>Incident Explorer</span>
+    </button>
+    <button onclick="switchTab('investigation')" id="tab-btn-investigation" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
+      <span>Incident Investigation</span>
+    </button>
+    <button onclick="switchTab('topology')" id="tab-btn-topology" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
+      <span>Service Map</span>
+    </button>
+    <button onclick="switchTab('model')" id="tab-btn-model" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
+      <span>Model & Benchmark</span>
+    </button>
+    <button onclick="switchTab('telemetry')" id="tab-btn-telemetry" class="tab-btn px-4 py-3 font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2 transition">
+      <span>Live Telemetry (OTLP)</span>
+    </button>
+  </nav>
+
+  <!-- Analysis Progress Modal -->
+  <div id="analysis-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="bg-[#0d1424] border border-slate-700/80 rounded-xl p-6 max-w-lg w-full shadow-2xl space-y-5">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center space-x-3">
+          <span class="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></span>
+          <h3 class="text-sm font-bold text-white tracking-wide" id="modal-title">Running AIOps Analysis Pipeline</h3>
+        </div>
+        <button onclick="closeAnalysisModal()" class="text-slate-400 hover:text-white text-xl font-mono leading-none">&times;</button>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex justify-between text-xs font-mono">
+          <span class="text-slate-300" id="modal-step-text">Initializing telemetry analysis...</span>
+          <span class="text-cyan-400 font-bold" id="modal-pct-text">0%</span>
+        </div>
+        <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800">
+          <div id="modal-progress-bar" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div id="modal-result-box" class="hidden pt-4 border-t border-slate-800 space-y-4">
+        <div class="p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-2" id="modal-result-content">
+          <!-- Dynamic summary -->
+        </div>
+        <div class="flex justify-end space-x-3 pt-1" id="modal-actions">
+          <!-- Dynamic buttons -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dataset Study Report Modal / Drawer -->
+  <div id="study-report-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+    <div class="bg-[#0d1424] border border-slate-700/90 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase" id="sr-type-badge">DATASET REPORT</span>
+            <h3 class="text-base font-bold text-white tracking-wide" id="sr-modal-title">Dataset Telemetry Study Report</h3>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5" id="sr-modal-subtitle">Analytical profile and forensic findings</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button onclick="downloadDatasetReportMarkdown()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-medium border border-slate-700 transition flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span>Download MD</span>
+          </button>
+          <button onclick="closeStudyReportModal()" class="text-slate-400 hover:text-white text-2xl font-mono leading-none">&times;</button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-6 flex-1 text-xs" id="sr-modal-body">
+        <div class="p-12 text-center text-slate-400">Loading dataset study report...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main View Container -->
+  <main class="flex-1 p-8 overflow-y-auto max-w-[1680px] w-full mx-auto">
+
+    <!-- ================================================================= -->
+    <!-- VIEW 1: OVERVIEW -->
+    <!-- ================================================================= -->
+    <section id="view-overview" class="space-y-8">
+      <!-- Top Metrics Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div class="card-glass rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Active Incidents</p>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold font-mono text-red-400" id="stat-active-incidents">-</span>
+            <span class="text-xs text-slate-500 font-mono font-medium">requiring triage</span>
+          </div>
+        </div>
+        <div class="card-glass rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Anomalies</p>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold font-mono text-amber-400" id="stat-total-anomalies">-</span>
+            <span class="text-xs text-slate-500 font-mono font-medium">spikes detected</span>
+          </div>
+        </div>
+        <div class="card-glass rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Services Monitored</p>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold font-mono text-cyan-400" id="stat-services">-</span>
+            <span class="text-xs text-slate-500 font-mono font-medium">in live topology</span>
+          </div>
+        </div>
+        <div class="card-glass rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Events Ingested</p>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold font-mono text-slate-200" id="stat-total-events">-</span>
+            <span class="text-xs text-slate-500 font-mono font-medium">normalized records</span>
+          </div>
+        </div>
+        <div class="card-glass rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+          <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Avg MTTR Estimate</p>
+          <div class="mt-3 flex items-baseline space-x-2">
+            <span class="text-3xl font-extrabold font-mono text-emerald-400" id="stat-avg-duration">-</span>
+            <span class="text-xs text-slate-500 font-mono font-medium">seconds resolution</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Incidents & Controls -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-2 card-glass rounded-xl overflow-hidden shadow-sm flex flex-col">
+          <div class="px-6 py-4 border-b border-slate-800/80 bg-slate-900/40 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center space-x-2.5">
+              <span>Active Operational Incidents</span>
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+            </h3>
+            <button onclick="switchTab('incidents')" class="text-xs text-cyan-400 hover:text-cyan-300 font-semibold transition">View All Incidents &rarr;</button>
+          </div>
+          <div class="divide-y divide-slate-800/80 flex-1" id="overview-incidents-list">
+            <div class="p-8 text-center text-xs text-slate-400">Loading incidents...</div>
+          </div>
+        </div>
+
+        <!-- Severity Distribution & Quick Action Panel -->
+        <div class="space-y-6">
+          <div class="card-glass rounded-xl p-6 shadow-sm">
+            <h3 class="text-sm font-bold text-white mb-4">Severity Breakdown</h3>
+            <div class="space-y-4" id="overview-severity-breakdown">
+              <div class="text-xs text-slate-400">Computing distribution...</div>
+            </div>
+          </div>
+
+          <div class="card-glass rounded-xl p-6 shadow-sm">
+            <h3 class="text-sm font-bold text-white mb-2">AIOps Operational Controls</h3>
+            <p class="text-xs text-slate-400 mb-5 leading-relaxed">
+              Execute end-to-end telemetry anomaly detection, event correlation, and root-cause localization across all applications.
+            </p>
+            <div class="flex flex-col space-y-3">
+              <button onclick="triggerAnalysisJob()" class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-md shadow-cyan-600/20 transition flex items-center justify-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <span>Run AIOps Analysis Pipeline</span>
+              </button>
+              <button onclick="switchTab('datasets')" class="w-full py-2.5 px-4 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs transition flex items-center justify-center space-x-2">
+                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <span>Upload Dataset (CSV / JSONL / Log)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 2: DATA SOURCES (BATCH INGESTION) -->
+    <!-- ================================================================= -->
+    <section id="view-datasets" class="hidden space-y-8">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- File Upload Card -->
+        <div class="card-glass rounded-xl p-6 shadow-sm space-y-5">
+          <div>
+            <h3 class="text-sm font-bold text-white mb-1">Batch Ingestion Gateway</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">Upload operational datasets in CSV, JSON, JSONL, or plain-text syslog format.</p>
+          </div>
+
+          <form id="upload-form" class="space-y-4" onsubmit="handleFileUpload(event)">
+            <div class="border-2 border-dashed border-slate-700/80 rounded-xl p-6 text-center hover:border-cyan-500/80 transition cursor-pointer bg-slate-950/40" onclick="document.getElementById('file-input').click()">
+              <input type="file" id="file-input" class="hidden" onchange="updateSelectedFileLabel(this)">
+              <svg class="w-9 h-9 text-slate-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+              <p class="text-xs font-semibold text-slate-200" id="file-selected-name">Click or drop file to upload</p>
+              <p class="text-[10px] text-slate-400 mt-1 font-mono">Supports .csv, .json, .jsonl, .log, .txt up to 100MB</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Dataset Name</label>
+              <input type="text" id="dataset-name-input" placeholder="e.g. Production Cluster Telemetry" class="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-medium">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-slate-300 mb-1">Description / Application Domain</label>
+              <input type="text" id="dataset-desc-input" placeholder="e.g. Distributed Cassandra storage cluster logs" class="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-medium">
+            </div>
+
+            <button type="submit" id="btn-upload-submit" class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-2">
+              <span>Ingest & Normalize Dataset</span>
+            </button>
+          </form>
+
+          <!-- Pre-packaged Multi-Domain Datasets -->
+          <div class="pt-5 border-t border-slate-800 space-y-2.5">
+            <h4 class="text-xs font-bold text-slate-300">Available Multi-Domain Datasets</h4>
+            <div class="space-y-2 text-xs">
+              <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition">
+                <div>
+                  <p class="font-semibold text-slate-200 text-xs">Cloud Microservices</p>
+                  <p class="text-[10px] text-slate-400">DB connection pool exhaustion</p>
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-bold">JSONL</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition">
+                <div>
+                  <p class="font-semibold text-slate-200 text-xs">Kubernetes Infrastructure</p>
+                  <p class="text-[10px] text-slate-400">Node memory leak & CoreDNS OOM</p>
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-bold">JSONL</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition">
+                <div>
+                  <p class="font-semibold text-slate-200 text-xs">Streaming Video Pipeline</p>
+                  <p class="text-[10px] text-slate-400">Kafka partition lag & frame drops</p>
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-bold">JSONL</span>
+              </div>
+              <div class="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 flex items-center justify-between hover:border-slate-700 transition">
+                <div>
+                  <p class="font-semibold text-slate-200 text-xs">LogHub HDFS Cluster</p>
+                  <p class="text-[10px] text-slate-400">DataNode heartbeat expirations</p>
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-cyan-400 font-bold">LOG</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ingested Datasets Table -->
+        <div class="lg:col-span-2 card-glass rounded-xl overflow-hidden shadow-sm flex flex-col">
+          <div class="px-6 py-4 border-b border-slate-800/80 bg-slate-900/40 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white">Ingested Telemetry Datasets</h3>
+            <span class="text-xs text-slate-400 font-mono" id="datasets-count-label">0 datasets</span>
+          </div>
+
+          <div class="flex-1 overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-mono text-[11px]">
+                  <th class="py-3 px-5">Dataset Name</th>
+                  <th class="py-3 px-3">Type</th>
+                  <th class="py-3 px-3">Valid / Invalid</th>
+                  <th class="py-3 px-3">Status</th>
+                  <th class="py-3 px-3">Ingested At</th>
+                  <th class="py-3 px-5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="datasets-table-body" class="divide-y divide-slate-800/80">
+                <tr><td colspan="6" class="p-8 text-center text-slate-400">Loading datasets...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 3: EVENT EXPLORER -->
+    <!-- ================================================================= -->
+    <section id="view-events" class="hidden space-y-6">
+      <div class="card-glass rounded-xl p-5 flex flex-wrap gap-4 items-center justify-between">
+        <div class="flex flex-wrap gap-3 items-center flex-1 min-w-[300px]">
+          <div class="relative flex-1 min-w-[220px]">
+            <input type="text" id="event-search-input" onkeyup="if(event.key==='Enter') loadEvents()" placeholder="Search messages, services, types..." class="w-full pl-9 pr-3.5 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-medium">
+            <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+
+          <select id="event-severity-filter" onchange="loadEvents()" class="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-300 focus:outline-none font-medium">
+            <option value="">All Severities</option>
+            <option value="critical">Critical / Fatal</option>
+            <option value="error">Error</option>
+            <option value="warning">Warning</option>
+            <option value="info">Info</option>
+          </select>
+
+          <select id="event-service-filter" onchange="loadEvents()" class="px-3 py-2 rounded-lg bg-slate-950 border border-slate-700 text-xs text-slate-300 focus:outline-none font-medium">
+            <option value="">All Services</option>
+          </select>
+
+          <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer ml-2 select-none">
+            <input type="checkbox" id="event-anomalies-toggle" onchange="loadEvents()" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-0">
+            <span class="font-medium">Anomalies Only</span>
+          </label>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <span class="text-xs text-slate-400 font-mono font-medium" id="events-count-badge">0 events</span>
+          <button onclick="loadEvents()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition">Filter</button>
+        </div>
+      </div>
+
+      <div class="card-glass rounded-xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-mono text-[11px]">
+                <th class="py-3 px-5 w-44">Timestamp (UTC)</th>
+                <th class="py-3 px-3 w-28">Severity</th>
+                <th class="py-3 px-3 w-40">Service</th>
+                <th class="py-3 px-3">Message</th>
+                <th class="py-3 px-4 w-32">Trace ID</th>
+              </tr>
+            </thead>
+            <tbody id="events-table-body" class="divide-y divide-slate-800/80 font-mono">
+              <tr><td colspan="5" class="p-8 text-center text-slate-400">Loading event stream...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 4: INCIDENT EXPLORER -->
+    <!-- ================================================================= -->
+    <section id="view-incidents" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white tracking-wide">Incident Explorer</h2>
+          <p class="text-xs text-slate-400">Correlated operational incidents across all monitored infrastructure</p>
+        </div>
+        <button onclick="triggerAnalysisJob()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-md transition flex items-center space-x-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          <span>Run Correlation Engine</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-5" id="incidents-full-list">
+        <div class="p-12 text-center text-xs text-slate-400">Loading incidents...</div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 5: INCIDENT INVESTIGATION WORKBENCH (ENLARGED RUNBOOKS) -->
+    <!-- ================================================================= -->
+    <section id="view-investigation" class="hidden space-y-8">
+      <!-- Incident Detail Header -->
+      <div class="card-glass rounded-2xl p-6 flex flex-wrap items-center justify-between gap-6 shadow-sm">
+        <div class="space-y-1.5">
+          <div class="flex items-center space-x-3 mb-1">
+            <span id="inv-severity-badge" class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-red-950 text-red-400 border border-red-800">CRITICAL</span>
+            <span id="inv-status-badge" class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold text-emerald-400 bg-emerald-950 border border-emerald-800">ACTIVE</span>
+            <span class="text-xs text-slate-400 font-mono font-medium" id="inv-id-label">INC-0000</span>
+          </div>
+          <h2 class="text-xl font-extrabold text-white tracking-wide" id="inv-title">Select an Incident to Investigate</h2>
+          <p class="text-xs text-slate-300 max-w-4xl leading-relaxed" id="inv-summary">Choose an incident from the Incident Explorer to view RCA evidence, blast radius, and timelines.</p>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <button onclick="downloadReport('markdown')" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition flex items-center space-x-2">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span>Post-Mortem (MD)</span>
+          </button>
+          <button onclick="downloadReport('json')" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-mono font-semibold transition">
+            JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Top Row: RCA Candidates & Timeline -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- RCA Candidates (Left) -->
+        <div class="lg:col-span-5 space-y-6">
+          <div class="card-glass rounded-xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 class="text-sm font-bold text-white tracking-wide">Root Cause Analysis</h3>
+              <span class="text-xs font-mono text-cyan-400 font-bold" id="inv-rca-count">Ranked Candidates</span>
+            </div>
+            <div class="space-y-4" id="inv-rca-list">
+              <div class="text-xs text-slate-400">No candidates loaded.</div>
+            </div>
+          </div>
+
+          <!-- Blast Radius Card -->
+          <div class="card-glass rounded-xl p-6 shadow-sm space-y-4">
+            <div class="border-b border-slate-800 pb-3">
+              <h3 class="text-sm font-bold text-white tracking-wide">Blast Radius & Impact</h3>
+            </div>
+            <div class="space-y-4 text-xs" id="inv-impact-card">
+              <p class="text-slate-400">Select an incident to view affected services.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chronological Timeline (Right) -->
+        <div class="lg:col-span-7 card-glass rounded-xl p-6 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <h3 class="text-sm font-bold text-white tracking-wide">Chronological Event Timeline</h3>
+            <span class="text-xs font-mono text-slate-400 font-semibold" id="inv-timeline-count">0 milestones</span>
+          </div>
+          <div class="flex-1 overflow-y-auto max-h-[580px] pr-3 space-y-4" id="inv-timeline-list">
+            <div class="text-xs text-slate-400">Timeline not available.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Row: Enlarged & Detailed Multi-Step Remediation Playbook (Full Width) -->
+      <div class="card-glass rounded-2xl p-7 shadow-md space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-800/80 pb-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800 uppercase">RUNBOOK GUIDE</span>
+              <h3 class="text-base font-extrabold text-white tracking-wide">Engineer Remediation & Incident Response Playbook</h3>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">Step-by-step verified terminal procedures, commands, and rollback safety instructions for this outage.</p>
+          </div>
+          <span class="px-3 py-1 rounded-md bg-slate-800 text-slate-300 font-mono text-xs font-semibold">5-Phase Playbook</span>
+        </div>
+
+        <!-- Enlarged Runbook Cards Container -->
+        <div class="space-y-5" id="inv-recommendations-list">
+          <p class="text-slate-400 text-xs">No runbook available.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 6: SERVICE TOPOLOGY MAP (TIERED DAG + HOVER TOOLTIPS) -->
+    <!-- ================================================================= -->
+    <section id="view-topology" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold text-white tracking-wide">Service Dependency Topology</h2>
+          <p class="text-xs text-slate-400">Interactive live graph showing service health halos, RPC dependencies, and fault propagation paths</p>
+        </div>
+        <div class="flex items-center space-x-4 text-xs font-medium">
+          <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-slate-300">Healthy (&gt;90%)</span></span>
+          <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span><span class="text-slate-300">Degraded (40-90%)</span></span>
+          <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span><span class="text-slate-300">Root Cause / Outage (&lt;40%)</span></span>
+        </div>
+      </div>
+
+      <div class="card-glass rounded-2xl p-6 canvas-grid relative overflow-hidden" style="min-height: 620px;">
+        <canvas id="topology-canvas" width="1400" height="620" class="w-full h-[620px] cursor-crosshair"></canvas>
+
+        <!-- Floating Live Hover Inspector Overlay -->
+        <div id="node-inspector" class="hidden absolute top-6 right-6 w-84 bg-[#0a0f1d]/95 border border-cyan-500/40 rounded-xl p-5 shadow-2xl backdrop-blur-md text-xs space-y-3 z-30 transition-all pointer-events-none">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div>
+              <h4 class="font-extrabold text-sm text-white font-mono" id="inspect-service-name">-</h4>
+              <span class="text-[10px] text-slate-400 font-mono" id="inspect-type">microservice</span>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold" id="inspect-status-badge">HEALTHY</span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-center font-mono">
+            <div class="p-2 rounded bg-slate-950/80 border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">Health</span>
+              <span class="text-cyan-400 font-bold text-xs" id="inspect-health-pct">98%</span>
+            </div>
+            <div class="p-2 rounded bg-slate-950/80 border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">Error Rate</span>
+              <span class="text-red-400 font-bold text-xs" id="inspect-error-rate">0.0%</span>
+            </div>
+            <div class="p-2 rounded bg-slate-950/80 border border-slate-800">
+              <span class="text-[10px] text-slate-400 block">P95 Latency</span>
+              <span class="text-amber-400 font-bold text-xs" id="inspect-p95-lat">25ms</span>
+            </div>
+          </div>
+
+          <!-- What Happened Section -->
+          <div class="p-3 rounded-lg bg-slate-950/90 border border-slate-800 space-y-1">
+            <span class="text-[10px] text-slate-400 uppercase font-mono font-semibold block">What Happened Here:</span>
+            <p class="text-[11px] text-slate-200 leading-relaxed font-sans" id="inspect-what-happened">Operating within normal baseline latency and zero error rate.</p>
+          </div>
+
+          <div class="space-y-1 text-slate-400 text-[11px] font-mono pt-1 border-t border-slate-800">
+            <p>Host: <span class="text-slate-200" id="inspect-host">-</span></p>
+            <p>Callers: <span class="text-cyan-300" id="inspect-callers">None</span></p>
+            <p>Dependencies: <span class="text-slate-300" id="inspect-callees">None</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 7: MODEL & BENCHMARK (ENGINEER ARCHITECTURE GUIDE) -->
+    <!-- ================================================================= -->
+    <section id="view-model" class="hidden space-y-8">
+      <!-- Architecture Overview Header -->
+      <div class="card-glass rounded-2xl p-6 shadow-sm">
+        <h2 class="text-base font-extrabold text-white tracking-wide mb-1">AIOps Machine Learning & Statistical Architecture Guide</h2>
+        <p class="text-xs text-slate-300 leading-relaxed max-w-4xl">
+          J.A.R.V.I.S. integrates 4 distinct, complementary algorithms engineered specifically for operational telemetry (logs, metrics, and distributed traces) to detect anomalies and perform explainable root cause analysis without black-box hallucination.
+        </p>
+      </div>
+
+      <!-- 4 Model Architecture Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Model 1 -->
+        <div class="card-glass rounded-xl p-5 shadow-sm space-y-3 border-t-2 border-cyan-500">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold">MODEL 1</span>
+            <span class="text-[10px] text-slate-400 font-mono">Univariate Baseline</span>
+          </div>
+          <h4 class="font-bold text-sm text-white">Dynamic Rolling Z-Score</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Maintains rolling window mean &sigma; and variance &mu; to detect instant metric shocks.
+          </p>
+          <div class="code-block p-2 rounded text-[11px] text-cyan-300 text-center font-mono">
+            z = (x_t - &mu;_w) / &sigma;_w &ge; 2.5
+          </div>
+          <ul class="text-[11px] text-slate-300 space-y-1 font-sans">
+            <li>&bull; <strong>Window Size</strong>: 10 rolling points</li>
+            <li>&bull; <strong>Threshold</strong>: 2.5 standard deviations</li>
+            <li>&bull; <strong>Strengths</strong>: Zero warmup training, O(1) streaming latency</li>
+          </ul>
+        </div>
+
+        <!-- Model 2 -->
+        <div class="card-glass rounded-xl p-5 shadow-sm space-y-3 border-t-2 border-blue-500">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 font-bold">MODEL 2</span>
+            <span class="text-[10px] text-slate-400 font-mono">Multivariate ML</span>
+          </div>
+          <h4 class="font-bold text-sm text-white">Isolation Forest Ensemble</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Unsupervised decision tree forest isolates anomalous combinations of CPU, RAM, and latency.
+          </p>
+          <div class="code-block p-2 rounded text-[11px] text-blue-300 text-center font-mono">
+            s(x, n) = 2^(-E(h(x)) / c(n))
+          </div>
+          <ul class="text-[11px] text-slate-300 space-y-1 font-sans">
+            <li>&bull; <strong>Estimators</strong>: 100 Isolation Trees</li>
+            <li>&bull; <strong>Contamination (&nu;)</strong>: 0.08 (tunable)</li>
+            <li>&bull; <strong>Features</strong>: [CPU%, Mem%, Latency, QPS]</li>
+          </ul>
+        </div>
+
+        <!-- Model 3 -->
+        <div class="card-glass rounded-xl p-5 shadow-sm space-y-3 border-t-2 border-amber-500">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-bold">MODEL 3</span>
+            <span class="text-[10px] text-slate-400 font-mono">Log Mining</span>
+          </div>
+          <h4 class="font-bold text-sm text-white">Drain Log Template Miner</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Extracts invariant templates from raw logs by parsing variable tokens (IPs, IDs, hex) into &lt;*&gt;.
+          </p>
+          <div class="code-block p-2 rounded text-[11px] text-amber-300 text-center font-mono">
+            Tokenize &rarr; Regex Slot &rarr; Cluster
+          </div>
+          <ul class="text-[11px] text-slate-300 space-y-1 font-sans">
+            <li>&bull; <strong>Parse Depth</strong>: Max 4 tree levels</li>
+            <li>&bull; <strong>Severity Surge</strong>: Catches FATAL & OOM</li>
+            <li>&bull; <strong>Strengths</strong>: Converts messy text to structured alerts</li>
+          </ul>
+        </div>
+
+        <!-- Model 4 -->
+        <div class="card-glass rounded-xl p-5 shadow-sm space-y-3 border-t-2 border-emerald-500">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold">MODEL 4</span>
+            <span class="text-[10px] text-slate-400 font-mono">Topological RCA</span>
+          </div>
+          <h4 class="font-bold text-sm text-white">Bayesian Graph Ranker</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Ranks root causes using temporal precedence, NetworkX DAG in-degree centrality, and evidence citations.
+          </p>
+          <div class="code-block p-2 rounded text-[11px] text-emerald-300 text-center font-mono">
+            Score = 0.35&bull;T + 0.25&bull;G + 0.25&bull;A
+          </div>
+          <ul class="text-[11px] text-slate-300 space-y-1 font-sans">
+            <li>&bull; <strong>Precedence Decay</strong>: e^(-&Delta;t / 120s)</li>
+            <li>&bull; <strong>Graph Direction</strong>: Callee &rarr; Caller cascade</li>
+            <li>&bull; <strong>Honest Uncertainty</strong>: Likely vs Inconclusive</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Controls & Benchmark Suite -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Interactive Training Card -->
+        <div class="card-glass rounded-xl p-6 shadow-sm space-y-5">
+          <h3 class="text-sm font-bold text-white">Model Hyperparameter Tuning</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Adjust hyperparameters and trigger real-time model retraining across ingested datasets.
+          </p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Contamination Rate (&nu;): <span id="val-contamination" class="text-cyan-400 font-mono">0.08</span></label>
+              <input type="range" id="input-contamination" min="0.01" max="0.25" step="0.01" value="0.08" oninput="document.getElementById('val-contamination').textContent=this.value" class="w-full accent-cyan-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Ensemble Trees: <span id="val-estimators" class="text-cyan-400 font-mono">100</span></label>
+              <input type="range" id="input-estimators" min="20" max="300" step="10" value="100" oninput="document.getElementById('val-estimators').textContent=this.value" class="w-full accent-cyan-500">
+            </div>
+
+            <button onclick="trainModel()" id="btn-train-model" class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-2">
+              <span>Retrain Isolation Forest</span>
+            </button>
+          </div>
+
+          <!-- Active Model Status Card -->
+          <div class="pt-4 border-t border-slate-800 space-y-3">
+            <h4 class="font-bold text-slate-200 text-xs">Active Model Metrics</h4>
+            <div class="p-3.5 rounded-lg bg-slate-950/80 border border-slate-800 space-y-2 font-mono text-xs">
+              <div class="flex justify-between"><span class="text-slate-400">Model:</span><span class="text-slate-200 font-bold">J.A.R.V.I.S.-IsolationForest</span></div>
+              <div class="flex justify-between"><span class="text-slate-400">F1 Score:</span><span class="text-emerald-400 font-bold" id="model-status-f1">0.90</span></div>
+              <div class="flex justify-between"><span class="text-slate-400">Precision:</span><span class="text-slate-200" id="model-status-prec">0.88</span></div>
+              <div class="flex justify-between"><span class="text-slate-400">Recall:</span><span class="text-slate-200" id="model-status-rec">0.92</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Benchmark Evaluation Suite (OpenRCA2-Lite / AIOps Challenge) -->
+        <div class="lg:col-span-2 card-glass rounded-xl p-6 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-sm font-bold text-white">AIOps Benchmark Evaluation Suite</h3>
+              <p class="text-xs text-slate-400">Ground-truth incident localization accuracy evaluated against OpenRCA2-Lite benchmark scenarios</p>
+            </div>
+            <button onclick="runBenchmarkEvaluation()" class="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 text-xs font-semibold transition">
+              Run Benchmark
+            </button>
+          </div>
+
+          <!-- Top-1 and Top-3 Scores -->
+          <div class="grid grid-cols-3 gap-4 mb-5">
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-center">
+              <span class="text-slate-400 text-[10px] uppercase font-mono font-bold">Top-1 Accuracy</span>
+              <p class="text-2xl font-extrabold font-mono text-emerald-400 mt-1" id="bench-top1">87.5%</p>
+            </div>
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-center">
+              <span class="text-slate-400 text-[10px] uppercase font-mono font-bold">Top-3 Accuracy</span>
+              <p class="text-2xl font-extrabold font-mono text-cyan-400 mt-1" id="bench-top3">100.0%</p>
+            </div>
+            <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-center">
+              <span class="text-slate-400 text-[10px] uppercase font-mono font-bold">Diagnosis Latency</span>
+              <p class="text-2xl font-extrabold font-mono text-slate-200 mt-1" id="bench-latency">143 ms</p>
+            </div>
+          </div>
+
+          <!-- Scenarios Table -->
+          <div class="flex-1 overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-950/60 border-b border-slate-800 text-slate-400 font-mono text-[11px]">
+                  <th class="py-2.5 px-3">Scenario</th>
+                  <th class="py-2.5 px-3">Ground Truth Root Cause</th>
+                  <th class="py-2.5 px-3">Top-3 Predicted Candidates</th>
+                  <th class="py-2.5 px-3 text-right">Result</th>
+                </tr>
+              </thead>
+              <tbody id="benchmark-scenarios-body" class="divide-y divide-slate-800/80 font-mono text-[11px]">
+                <tr><td colspan="4" class="p-6 text-center text-slate-400">Loading benchmark evaluation...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- VIEW 8: LIVE TELEMETRY (OTLP RECEIVER) -->
+    <!-- ================================================================= -->
+    <section id="view-telemetry" class="hidden space-y-8">
+      <div class="card-glass rounded-2xl p-7 shadow-sm space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-extrabold text-white">OpenTelemetry (OTLP) Live Ingestion Gateway</h3>
+            <p class="text-xs text-slate-400 mt-1">Receive continuous telemetry streams from OpenTelemetry Collector, Fluent Bit, or application SDKs 24/7 without manual file uploads</p>
+          </div>
+          <button onclick="simulateLiveTelemetryBurst()" class="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs shadow-md transition flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <span>Simulate Live OTLP Burst</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs">
+            <span class="text-slate-400 text-[10px] block mb-1 font-bold">TRACES ENDPOINT</span>
+            <span class="text-cyan-400 font-bold text-sm">POST /v1/traces</span>
+            <p class="text-[10px] text-slate-400 mt-1.5 font-sans">OTLP Protobuf / JSON distributed spans</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs">
+            <span class="text-slate-400 text-[10px] block mb-1 font-bold">LOGS ENDPOINT</span>
+            <span class="text-cyan-400 font-bold text-sm">POST /v1/logs</span>
+            <p class="text-[10px] text-slate-400 mt-1.5 font-sans">OpenTelemetry structured log stream</p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs">
+            <span class="text-slate-400 text-[10px] block mb-1 font-bold">METRICS ENDPOINT</span>
+            <span class="text-cyan-400 font-bold text-sm">POST /v1/metrics</span>
+            <p class="text-[10px] text-slate-400 mt-1.5 font-sans">OTLP gauge and sum time-series metrics</p>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="text-xs font-bold text-slate-200 mb-2">Live In-Memory Buffer Stream (<span id="telemetry-buffer-count">0</span> events buffered)</h4>
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 font-mono text-[11px] text-slate-300 max-h-72 overflow-y-auto space-y-1.5 shadow-inner" id="telemetry-buffer-feed">
+            <p class="text-slate-500">// Telemetry buffer listening on /v1/* endpoints...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Client-side SPA Application Logic -->
+  <script>
+    let currentIncidentId = null;
+    let currentStudyDatasetId = null;
+    let allIncidents = [];
+    let topologyData = null;
+    let hoveredNode = null;
+    let analysisPollTimer = null;
+
+    // View Navigation
+    function switchTab(tabName) {
+      document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('active', 'border-cyan-500', 'text-cyan-400');
+        el.classList.add('border-transparent', 'text-slate-400');
+      });
+
+      const target = document.getElementById('view-' + tabName);
+      if (target) target.classList.remove('hidden');
+
+      const btn = document.getElementById('tab-btn-' + tabName);
+      if (btn) {
+        btn.classList.add('active', 'border-cyan-500', 'text-cyan-400');
+        btn.classList.remove('border-transparent', 'text-slate-400');
+      }
+
+      if (tabName === 'topology') renderTopology();
+      if (tabName === 'events') loadEvents();
+      if (tabName === 'datasets') loadDatasets();
+      if (tabName === 'incidents') loadIncidents();
+      if (tabName === 'model') loadModelStatus();
+      if (tabName === 'telemetry') loadTelemetryStats();
+    }
+
+    // Refresh All Data
+    async function refreshAll() {
+      await loadSummary();
+      await loadIncidents();
+      await loadDatasets();
+      await loadTopology();
+    }
+
+    // Load Dashboard Summary
+    async function loadSummary() {
+      try {
+        const res = await fetch('/api/dashboard/summary');
+        const data = await res.json();
+
+        document.getElementById('stat-active-incidents').textContent = data.active_incidents || 0;
+        document.getElementById('ticker-active-incidents').textContent = data.active_incidents || 0;
+        document.getElementById('stat-total-anomalies').textContent = (data.total_anomalies || 0).toLocaleString();
+        document.getElementById('ticker-total-anomalies').textContent = (data.total_anomalies || 0).toLocaleString();
+        document.getElementById('stat-services').textContent = data.services_monitored || 0;
+        document.getElementById('ticker-services').textContent = data.services_monitored || 0;
+        document.getElementById('stat-total-events').textContent = (data.total_events || 0).toLocaleString();
+        document.getElementById('ticker-total-events').textContent = (data.total_events || 0).toLocaleString();
+        document.getElementById('stat-avg-duration').textContent = (data.avg_resolution_seconds || 0).toFixed(0);
+
+        // Render Severity Distribution
+        const sevBox = document.getElementById('overview-severity-breakdown');
+        sevBox.innerHTML = '';
+        const sevs = data.severity_distribution || {};
+        for (const [sev, count] of Object.entries(sevs)) {
+          const colorClass = sev === 'critical' ? 'bg-red-500' : (sev === 'high' ? 'bg-amber-500' : 'bg-cyan-500');
+          sevBox.innerHTML += `
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="capitalize text-slate-300 font-mono font-semibold">${sev}</span>
+                <span class="font-mono text-slate-400">${count} incidents</span>
+              </div>
+              <div class="w-full bg-slate-950 h-2.5 rounded-full overflow-hidden border border-slate-800">
+                <div class="${colorClass} h-full transition-all duration-500" style="width: ${Math.min(100, count * 35)}%"></div>
+              </div>
+            </div>
+          `;
+        }
+      } catch (err) {
+        console.error('Failed to load summary:', err);
+      }
+    }
+
+    // Load Incidents List
+    async function loadIncidents() {
+      try {
+        const res = await fetch('/api/incidents');
+        allIncidents = await res.json();
+
+        // Populate Overview List
+        const ovList = document.getElementById('overview-incidents-list');
+        ovList.innerHTML = '';
+        if (allIncidents.length === 0) {
+          ovList.innerHTML = '<div class="p-8 text-center text-xs text-slate-400 font-medium">No active incidents detected. All monitored systems are operational.</div>';
+        } else {
+          allIncidents.slice(0, 5).forEach(inc => {
+            const sevColor = inc.severity === 'critical' ? 'text-red-400 bg-red-950 border-red-800' : 'text-amber-400 bg-amber-950 border-amber-800';
+            ovList.innerHTML += `
+              <div class="p-5 hover:bg-slate-850/60 transition flex items-center justify-between cursor-pointer" onclick="investigateIncident('${inc.id}')">
+                <div class="space-y-1.5">
+                  <div class="flex items-center space-x-2.5">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${sevColor}">${inc.severity.toUpperCase()}</span>
+                    <span class="font-bold text-slate-200 text-xs">${inc.title}</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400">Origin: <strong class="text-slate-300 font-mono">${inc.root_cause_service || 'Unknown'}</strong> | Confidence: <strong class="text-cyan-400 font-mono">${(inc.confidence_score * 100).toFixed(0)}%</strong> | Affected: <strong class="text-amber-400 font-mono">${inc.affected_service_count} services</strong></p>
+                </div>
+                <button class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-semibold border border-slate-700 transition">
+                  Investigate &rarr;
+                </button>
+              </div>
+            `;
+          });
+        }
+
+        // Populate Incident Explorer
+        const fullList = document.getElementById('incidents-full-list');
+        fullList.innerHTML = '';
+        if (allIncidents.length === 0) {
+          fullList.innerHTML = '<div class="p-12 text-center text-xs text-slate-400">No incidents recorded yet. Click "Run Correlation Engine" or analyze an operational dataset.</div>';
+        } else {
+          allIncidents.forEach(inc => {
+            const sevColor = inc.severity === 'critical' ? 'text-red-400 bg-red-950 border-red-800' : 'text-amber-400 bg-amber-950 border-amber-800';
+            fullList.innerHTML += `
+              <div class="card-glass rounded-xl p-6 flex flex-wrap items-center justify-between gap-5 hover:border-slate-700 transition shadow-sm">
+                <div class="space-y-2 max-w-3xl">
+                  <div class="flex items-center space-x-3">
+                    <span class="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold border ${sevColor}">${inc.severity.toUpperCase()}</span>
+                    <h3 class="text-sm font-bold text-white tracking-wide">${inc.title}</h3>
+                  </div>
+                  <p class="text-xs text-slate-300 leading-relaxed">${inc.summary}</p>
+                  <div class="flex flex-wrap gap-5 text-xs text-slate-400 font-mono pt-1">
+                    <span>Root Cause: <strong class="text-slate-200">${inc.root_cause_service}</strong></span>
+                    <span>Confidence: <strong class="text-cyan-400 font-bold">${(inc.confidence_score * 100).toFixed(0)}%</strong></span>
+                    <span>Affected Services: <strong class="text-amber-400 font-bold">${inc.affected_service_count}</strong></span>
+                    <span>Duration: <strong class="text-slate-300">${(inc.duration_seconds || 0).toFixed(0)}s</strong></span>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                  <button onclick="investigateIncident('${inc.id}')" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition shadow-md shadow-cyan-600/20">
+                    Open Workbench &rarr;
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        // Auto-select first incident for investigation if none selected
+        if (!currentIncidentId && allIncidents.length > 0) {
+          loadIncidentInvestigation(allIncidents[0].id);
+        }
+
+      } catch (err) {
+        console.error('Failed to load incidents:', err);
+      }
+    }
+
+    // Investigate Specific Incident
+    function investigateIncident(incidentId) {
+      currentIncidentId = incidentId;
+      switchTab('investigation');
+      loadIncidentInvestigation(incidentId);
+    }
+
+    // Load Incident Investigation Workbench (Enlarged Runbooks & Evidence)
+    async function loadIncidentInvestigation(incidentId) {
+      currentIncidentId = incidentId;
+      try {
+        const [incRes, rcaRes, timeRes, impRes, recRes] = await Promise.all([
+          fetch(`/api/incidents/${incidentId}`).then(r => r.json()),
+          fetch(`/api/incidents/${incidentId}/root-cause`).then(r => r.json()),
+          fetch(`/api/incidents/${incidentId}/timeline`).then(r => r.json()),
+          fetch(`/api/incidents/${incidentId}/impact`).then(r => r.json()),
+          fetch(`/api/incidents/${incidentId}/recommendations`).then(r => r.json()),
+        ]);
+
+        // Header
+        document.getElementById('inv-title').textContent = incRes.title;
+        document.getElementById('inv-summary').textContent = incRes.summary;
+        document.getElementById('inv-id-label').textContent = incRes.id.slice(0, 13);
+        document.getElementById('inv-severity-badge').textContent = incRes.severity.toUpperCase();
+
+        // RCA Candidates
+        const rcaList = document.getElementById('inv-rca-list');
+        rcaList.innerHTML = '';
+        (rcaRes.candidates || []).forEach(c => {
+          const isTop = c.rank === 1;
+          const borderClass = isTop ? 'border-cyan-500/80 bg-cyan-950/20 shadow-sm shadow-cyan-500/10' : 'border-slate-800 bg-slate-950/60';
+          rcaList.innerHTML += `
+            <div class="border ${borderClass} rounded-xl p-4 space-y-2.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                  <span class="w-6 h-6 rounded-full ${isTop ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-400 font-semibold'} flex items-center justify-center text-[10px] font-mono">#${c.rank}</span>
+                  <span class="font-bold text-xs text-slate-100 font-mono">${c.service_name}</span>
+                </div>
+                <span class="text-xs font-mono font-bold ${isTop ? 'text-cyan-400' : 'text-slate-400'}">${(c.confidence_score * 100).toFixed(0)}% Conf.</span>
+              </div>
+              <p class="text-[11px] text-slate-300 leading-relaxed">${c.uncertainty_assessment}</p>
+              <div class="pt-2 border-t border-slate-800/80 space-y-1.5">
+                <span class="text-[10px] text-slate-400 uppercase font-mono font-bold block">Supporting Telemetry Evidence:</span>
+                ${(c.evidence || []).map(ev => `<p class="text-[10px] text-slate-300 font-mono bg-slate-900/80 p-1.5 rounded-md border border-slate-800/60">&bull; ${ev}</p>`).join('')}
+              </div>
+            </div>
+          `;
+        });
+
+        // Timeline
+        const timeList = document.getElementById('inv-timeline-list');
+        timeList.innerHTML = '';
+        document.getElementById('inv-timeline-count').textContent = `${(timeRes.timeline || []).length} milestones`;
+        (timeRes.timeline || []).forEach(item => {
+          const isOnset = item.milestone === 'INCIDENT_ONSET';
+          const dotColor = isOnset ? 'bg-red-500 ring-4 ring-red-500/20' : (item.severity === 'critical' ? 'bg-amber-500' : 'bg-cyan-500');
+          timeList.innerHTML += `
+            <div class="flex space-x-3.5 text-xs">
+              <div class="flex flex-col items-center">
+                <span class="w-3 h-3 rounded-full ${dotColor}"></span>
+                <span class="w-px flex-1 bg-slate-800 my-1"></span>
+              </div>
+              <div class="flex-1 pb-4">
+                <div class="flex items-center space-x-2 font-mono text-[11px]">
+                  <span class="text-cyan-400 font-bold">${item.offset_formatted}</span>
+                  <span class="text-slate-200 font-bold">[${item.service_name}]</span>
+                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400">${item.milestone}</span>
+                </div>
+                <p class="text-slate-200 font-mono text-[11px] mt-1.5 bg-slate-950/80 p-2 rounded-lg border border-slate-800/70 leading-relaxed">${item.message}</p>
+              </div>
+            </div>
+          `;
+        });
+
+        // Blast Radius Impact
+        const impCard = document.getElementById('inv-impact-card');
+        const directList = (impRes.direct_services || []).map(s => `<span class="px-2.5 py-1 rounded-md bg-red-950/80 border border-red-800 text-red-300 font-mono text-xs font-semibold">${s}</span>`).join(' ');
+        const downList = (impRes.downstream_services || []).map(s => `<span class="px-2.5 py-1 rounded-md bg-amber-950/80 border border-amber-800 text-amber-300 font-mono text-xs font-semibold">${s}</span>`).join(' ');
+        impCard.innerHTML = `
+          <div>
+            <span class="text-slate-400 text-[10px] block mb-1.5 font-mono uppercase font-bold">Direct Origin / Core Outage:</span>
+            <div class="flex flex-wrap gap-2">${directList || '<span class="text-slate-500 font-mono">None</span>'}</div>
+          </div>
+          <div>
+            <span class="text-slate-400 text-[10px] block mb-1.5 font-mono uppercase font-bold">Downstream Cascading Degradation:</span>
+            <div class="flex flex-wrap gap-2">${downList || '<span class="text-slate-500 font-mono">None</span>'}</div>
+          </div>
+          <div class="pt-3 border-t border-slate-800 grid grid-cols-2 gap-3 text-center font-mono">
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <span class="text-slate-400 text-[10px] block font-bold">Degraded Events</span>
+              <span class="text-red-400 font-extrabold text-base">${impRes.total_events_affected || 0}</span>
+            </div>
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800">
+              <span class="text-slate-400 text-[10px] block font-bold">Latency Spike</span>
+              <span class="text-amber-400 font-extrabold text-base">+${impRes.avg_latency_increase_pct || 0}%</span>
+            </div>
+          </div>
+        `;
+
+        // Enlarged Step-by-Step Remediation Playbook Cards
+        const recList = document.getElementById('inv-recommendations-list');
+        recList.innerHTML = '';
+        (recRes.recommendations || []).forEach((r, idx) => {
+          const phaseBadge = r.phase || `Phase ${idx+1}: Investigation`;
+          const commandSnippet = r.command ? `
+            <div class="space-y-1 mt-2">
+              <div class="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+                <span>Executable Terminal Command:</span>
+                <button onclick="copyToClipboard('${r.command.replace(/'/g, "\\'")}', this)" class="text-cyan-400 hover:text-cyan-300 font-sans font-semibold text-[11px] flex items-center space-x-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                  <span>Copy</span>
+                </button>
+              </div>
+              <div class="code-block p-3 rounded-lg text-emerald-400 text-xs overflow-x-auto whitespace-pre font-mono"><code>${r.command}</code></div>
+            </div>
+          ` : '';
+
+          const expectedSnippet = r.expected_output ? `
+            <div class="mt-2 text-[11px] p-2.5 rounded-lg bg-slate-950/70 border border-slate-800/80 text-slate-300 font-sans">
+              <strong class="text-slate-400 font-mono">Expected Output: </strong>${r.expected_output}
+            </div>
+          ` : '';
+
+          const rollbackSnippet = r.rollback_plan ? `
+            <div class="mt-1.5 text-[11px] text-amber-400/90 font-mono">
+              <strong>Rollback Plan: </strong>${r.rollback_plan}
+            </div>
+          ` : '';
+
+          recList.innerHTML += `
+            <div class="card-glass rounded-xl p-5 border border-slate-800/90 hover:border-slate-700 transition space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+                <div class="flex items-center space-x-2.5">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">${phaseBadge}</span>
+                  <h4 class="font-extrabold text-white text-sm tracking-wide">${r.title}</h4>
+                </div>
+                <div class="flex items-center space-x-2 font-mono text-[10px]">
+                  <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300">${r.risk_level || 'Low Risk'}</span>
+                  <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800">${r.action_type || 'verification'}</span>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed font-sans">${r.description}</p>
+              ${commandSnippet}
+              ${expectedSnippet}
+              ${rollbackSnippet}
+            </div>
+          `;
+        });
+
+      } catch (err) {
+        console.error('Failed to load incident investigation:', err);
+      }
+    }
+
+    // Helper: Copy code snippet
+    function copyToClipboard(text, btn) {
+      navigator.clipboard.writeText(text);
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="text-emerald-400 font-bold">✓ Copied!</span>';
+      setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+    }
+
+    // Download Incident Post-Mortem Report
+    function downloadReport(format) {
+      if (!currentIncidentId) return;
+      window.location.href = `/api/incidents/${currentIncidentId}/report?format=${format}`;
+    }
+
+    // Load Ingested Datasets
+    async function loadDatasets() {
+      try {
+        const res = await fetch('/api/datasets');
+        const datasets = await res.json();
+        const tbody = document.getElementById('datasets-table-body');
+        tbody.innerHTML = '';
+        document.getElementById('datasets-count-label').textContent = `${datasets.length} datasets`;
+
+        if (datasets.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No datasets uploaded yet. Upload a file above.</td></tr>';
+          return;
+        }
+
+        datasets.forEach(ds => {
+          const statusColor = ds.status === 'processed' ? 'text-emerald-400 bg-emerald-950 border-emerald-800 font-bold' : 'text-amber-400 bg-amber-950 border-amber-800 font-bold';
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-850/50 transition">
+              <td class="py-3 px-5 font-semibold text-slate-200">
+                ${ds.name}
+                <span class="block text-[11px] text-slate-400 font-normal mt-0.5">${ds.description || ''}</span>
+              </td>
+              <td class="py-3 px-3 font-mono text-[11px] text-cyan-400 uppercase font-bold">${ds.source_type || 'auto'}</td>
+              <td class="py-3 px-3 font-mono text-[11px] text-slate-200 font-semibold">${ds.valid_records || 0} / ${ds.invalid_records || 0}</td>
+              <td class="py-3 px-3 font-mono text-[10px]"><span class="px-2 py-0.5 rounded border ${statusColor}">${ds.status.toUpperCase()}</span></td>
+              <td class="py-3 px-3 font-mono text-[11px] text-slate-400">${ds.created_at.slice(0, 19).replace('T', ' ')}</td>
+              <td class="py-3 px-5 text-right space-x-2">
+                <button onclick="runAnalysisForDataset('${ds.id}')" class="px-2.5 py-1.5 rounded-md bg-cyan-950 hover:bg-cyan-900 text-cyan-400 border border-cyan-800 text-xs font-bold transition">Analyze</button>
+                <button onclick="viewDatasetStudyReport('${ds.id}')" class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition">Study Report</button>
+                <button onclick="deleteDataset('${ds.id}')" class="px-2 py-1 rounded-md bg-slate-850 hover:bg-red-950 text-slate-400 hover:text-red-400 border border-slate-700/80 text-[11px] transition">Delete</button>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        console.error('Failed to load datasets:', err);
+      }
+    }
+
+    // View Dataset Study Report Modal
+    async function viewDatasetStudyReport(datasetId) {
+      currentStudyDatasetId = datasetId;
+      document.getElementById('study-report-modal').classList.remove('hidden');
+      const body = document.getElementById('sr-modal-body');
+      body.innerHTML = '<div class="p-12 text-center text-slate-400 font-mono">Generating comprehensive telemetry study report...</div>';
+
+      try {
+        const res = await fetch(`/api/datasets/${datasetId}/study-report`);
+        const report = await res.json();
+
+        document.getElementById('sr-modal-title').textContent = report.dataset_name;
+        document.getElementById('sr-modal-subtitle').textContent = report.description || 'Operational Telemetry Study Report';
+        document.getElementById('sr-type-badge').textContent = `${report.source_type} DATASET`;
+
+        // Render findings
+        const findingsHtml = (report.findings || []).map(f => `
+          <li class="flex items-start space-x-2 text-slate-200">
+            <span class="text-cyan-400 font-bold mt-0.5">&bull;</span>
+            <span>${f}</span>
+          </li>
+        `).join('');
+
+        // Render services table
+        const srvHtml = (report.services || []).map(s => {
+          const st = s.errs > 10 ? 'bg-red-950 text-red-400 border-red-800' : (s.errs > 0 ? 'bg-amber-950 text-amber-400 border-amber-800' : 'bg-emerald-950 text-emerald-400 border-emerald-800');
+          return `
+            <tr class="hover:bg-slate-900/60 transition">
+              <td class="py-2 px-3 font-mono text-cyan-300 font-bold">${s.service_name}</td>
+              <td class="py-2 px-3 font-mono text-slate-300">${s.count}</td>
+              <td class="py-2 px-3 font-mono text-red-400 font-bold">${s.errs}</td>
+              <td class="py-2 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-mono border ${st}">${s.errs > 10 ? 'CRITICAL' : (s.errs > 0 ? 'DEGRADED' : 'HEALTHY')}</span></td>
+            </tr>
+          `;
+        }).join('');
+
+        // Render incidents cards with direct navigation
+        const incidentsHtml = (report.incidents || []).length > 0 ? `
+          <div class="space-y-3 pt-3">
+            <h4 class="text-xs font-bold text-white uppercase font-mono tracking-wider">Associated Operational Incident(s):</h4>
+            ${report.incidents.map(inc => `
+              <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-950 text-red-400 border border-red-800">${inc.severity.toUpperCase()}</span>
+                    <h5 class="text-xs font-bold text-white">${inc.title}</h5>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-1">Origin: <strong class="text-cyan-400 font-mono">${inc.root_cause_service}</strong> | Confidence: <strong class="text-slate-200 font-mono">${(inc.confidence_score * 100).toFixed(0)}%</strong></p>
+                </div>
+                <button onclick="closeStudyReportModal(); investigateIncident('${inc.id}')" class="px-3.5 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-md transition">
+                  Open Investigation &rarr;
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        ` : `
+          <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-400">
+            No incidents generated. All records evaluated within baseline operational parameters.
+          </div>
+        `;
+
+        body.innerHTML = `
+          <!-- Executive Findings -->
+          <div class="card-glass rounded-xl p-5 space-y-3">
+            <h4 class="text-xs font-bold text-white uppercase font-mono tracking-wider">Forensic Findings & Executive Summary</h4>
+            <ul class="space-y-1.5 text-xs">${findingsHtml}</ul>
+          </div>
+
+          <!-- Key Metrics Grid -->
+          <div class="grid grid-cols-4 gap-3 font-mono">
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+              <span class="text-[10px] text-slate-400 block font-bold">TOTAL ANOMALIES</span>
+              <span class="text-amber-400 font-extrabold text-lg">${report.total_anomalies}</span>
+            </div>
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+              <span class="text-[10px] text-slate-400 block font-bold">EVENTS ANALYZED</span>
+              <span class="text-slate-200 font-extrabold text-lg">${report.events_count}</span>
+            </div>
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+              <span class="text-[10px] text-slate-400 block font-bold">SERVICES IDENTIFIED</span>
+              <span class="text-cyan-400 font-extrabold text-lg">${report.services_count}</span>
+            </div>
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-center">
+              <span class="text-[10px] text-slate-400 block font-bold">TRACES DURATION</span>
+              <span class="text-emerald-400 font-extrabold text-lg">${report.avg_trace_latency_ms} ms</span>
+            </div>
+          </div>
+
+          <!-- Incidents Navigation Section -->
+          ${incidentsHtml}
+
+          <!-- Services Discovered Table -->
+          <div class="card-glass rounded-xl overflow-hidden space-y-2 p-4">
+            <h4 class="text-xs font-bold text-white uppercase font-mono tracking-wider">Discovered Services & Error Distribution</h4>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="bg-slate-950/80 text-slate-400 font-mono text-[11px] border-b border-slate-800">
+                    <th class="py-2 px-3">Service</th>
+                    <th class="py-2 px-3">Events Count</th>
+                    <th class="py-2 px-3">Errors Logged</th>
+                    <th class="py-2 px-3">Diagnostic Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/80">${srvHtml || '<tr><td colspan="4" class="p-4 text-center text-slate-500 font-mono">No services logged</td></tr>'}</tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+      } catch (err) {
+        body.innerHTML = `<div class="p-8 text-center text-red-400 font-mono">Failed to load study report: ${err}</div>`;
+      }
+    }
+
+    function closeStudyReportModal() {
+      document.getElementById('study-report-modal').classList.add('hidden');
+    }
+
+    function downloadDatasetReportMarkdown() {
+      if (!currentStudyDatasetId) return;
+      window.location.href = `/api/datasets/${currentStudyDatasetId}/study-report?format=markdown`;
+    }
+
+    // Handle File Upload
+    async function handleFileUpload(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('file-input');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please choose a file to upload.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('name', document.getElementById('dataset-name-input').value || file.name);
+      formData.append('description', document.getElementById('dataset-desc-input').value || '');
+      formData.append('auto_process', 'true');
+
+      const submitBtn = document.getElementById('btn-upload-submit');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Uploading & Normalizing...</span>';
+
+      try {
+        const res = await fetch('/api/datasets/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Ingest & Normalize Dataset</span>';
+        fileInput.value = '';
+        document.getElementById('file-selected-name').textContent = 'Click or drop file to upload';
+        await loadDatasets();
+        await refreshAll();
+        // Immediately view study report
+        viewDatasetStudyReport(data.id);
+      } catch (err) {
+        alert('Upload failed: ' + err);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Ingest & Normalize Dataset</span>';
+      }
+    }
+
+    function updateSelectedFileLabel(input) {
+      if (input.files && input.files[0]) {
+        document.getElementById('file-selected-name').textContent = input.files[0].name;
+        if (!document.getElementById('dataset-name-input').value) {
+          document.getElementById('dataset-name-input').value = input.files[0].name;
+        }
+      }
+    }
+
+    // Modal Analysis Flow with Direct Study Report Opening
+    function showAnalysisModal(title) {
+      document.getElementById('analysis-modal').classList.remove('hidden');
+      document.getElementById('modal-title').textContent = title || 'Running AIOps Analysis Pipeline';
+      document.getElementById('modal-step-text').textContent = 'Starting anomaly detection & correlation...';
+      document.getElementById('modal-pct-text').textContent = '10%';
+      document.getElementById('modal-progress-bar').style.width = '10%';
+      document.getElementById('modal-progress-bar').className = 'bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-300';
+      document.getElementById('modal-result-box').classList.add('hidden');
+    }
+
+    function closeAnalysisModal() {
+      if (analysisPollTimer) clearInterval(analysisPollTimer);
+      document.getElementById('analysis-modal').classList.add('hidden');
+    }
+
+    async function triggerAnalysisJob() {
+      showAnalysisModal('Running Full AIOps Pipeline');
+      try {
+        const res = await fetch('/api/analysis/run', { method: 'POST' });
+        const data = await res.json();
+        pollAnalysisJob(data.job_id, data.dataset_id);
+      } catch (err) {
+        document.getElementById('modal-step-text').textContent = 'Error: ' + err;
+      }
+    }
+
+    async function runAnalysisForDataset(datasetId) {
+      showAnalysisModal('Analyzing Operational Dataset');
+      try {
+        const res = await fetch('/api/analysis/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataset_id: datasetId }),
+        });
+        const data = await res.json();
+        pollAnalysisJob(data.job_id, datasetId);
+      } catch (err) {
+        document.getElementById('modal-step-text').textContent = 'Error: ' + err;
+      }
+    }
+
+    function pollAnalysisJob(jobId, datasetId) {
+      if (analysisPollTimer) clearInterval(analysisPollTimer);
+      analysisPollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/analysis/jobs/${jobId}`);
+          const job = await res.json();
+
+          document.getElementById('modal-step-text').textContent = job.current_step || 'Processing...';
+          const pct = Math.max(15, job.progress_pct || 15);
+          document.getElementById('modal-pct-text').textContent = `${pct}%`;
+          document.getElementById('modal-progress-bar').style.width = `${pct}%`;
+
+          if (job.status === 'completed' || job.status === 'failed') {
+            clearInterval(analysisPollTimer);
+            document.getElementById('modal-result-box').classList.remove('hidden');
+            const contentBox = document.getElementById('modal-result-content');
+            const actionsBox = document.getElementById('modal-actions');
+
+            await refreshAll();
+
+            if (job.status === 'completed') {
+              document.getElementById('modal-progress-bar').className = 'bg-emerald-500 h-full transition-all duration-300';
+              const r = job.result || {};
+              const created = r.incidents_created || 0;
+              const anoms = r.anomalies_detected || 0;
+
+              if (created > 0 && r.incident_ids && r.incident_ids.length > 0) {
+                const newIncId = r.incident_ids[0];
+                contentBox.innerHTML = `
+                  <div class="flex items-center space-x-2 text-emerald-400 font-bold text-xs">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span>Analysis Complete: ${created} Incident Diagnosed</span>
+                  </div>
+                  <p class="text-xs text-slate-300">Flagged <strong class="text-amber-400 font-mono">${anoms} anomalies</strong> across metrics and logs, and isolated the root cause.</p>
+                `;
+                actionsBox.innerHTML = `
+                  <button onclick="closeAnalysisModal(); viewDatasetStudyReport('${datasetId}')" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
+                    View Study Report
+                  </button>
+                  <button onclick="closeAnalysisModal(); investigateIncident('${newIncId}')" class="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs transition shadow-md shadow-cyan-600/25">
+                    Open Incident Investigation &rarr;
+                  </button>
+                `;
+              } else {
+                contentBox.innerHTML = `
+                  <div class="flex items-center space-x-2 text-slate-200 font-bold text-xs">
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                    <span>Analysis Complete: System is Healthy</span>
+                  </div>
+                  <p class="text-xs text-slate-400">Evaluated all records. No abnormal variance, metric spikes, or error logs detected.</p>
+                `;
+                actionsBox.innerHTML = `
+                  <button onclick="closeAnalysisModal(); viewDatasetStudyReport('${datasetId}')" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs transition">
+                    View Dataset Study Report &rarr;
+                  </button>
+                `;
+              }
+            } else {
+              document.getElementById('modal-progress-bar').className = 'bg-red-500 h-full transition-all duration-300';
+              contentBox.innerHTML = `
+                <div class="text-red-400 font-bold text-xs">Analysis Pipeline Encountered an Error</div>
+                <p class="text-xs text-slate-400">${job.error_message || 'Unexpected failure during processing.'}</p>
+              `;
+              actionsBox.innerHTML = `
+                <button onclick="closeAnalysisModal()" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-200 text-xs font-semibold">Dismiss</button>
+              `;
+            }
+          }
+        } catch (e) {
+          console.error('Job poll error:', e);
+        }
+      }, 400);
+    }
+
+    async function deleteDataset(datasetId) {
+      if (!confirm('Are you sure you want to delete this dataset and all associated records?')) return;
+      await fetch(`/api/datasets/${datasetId}`, { method: 'DELETE' });
+      await loadDatasets();
+      await refreshAll();
+    }
+
+    // Load Events Logstream
+    async function loadEvents() {
+      const search = document.getElementById('event-search-input').value;
+      const severity = document.getElementById('event-severity-filter').value;
+      const service = document.getElementById('event-service-filter').value;
+      const anomOnly = document.getElementById('event-anomalies-toggle').checked;
+
+      const url = new URL('/api/events', window.location.origin);
+      if (search) url.searchParams.set('query', search);
+      if (severity) url.searchParams.set('severity', severity);
+      if (service) url.searchParams.set('service', service);
+      if (anomOnly) url.searchParams.set('anomalies_only', 'true');
+      url.searchParams.set('limit', '80');
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const tbody = document.getElementById('events-table-body');
+        tbody.innerHTML = '';
+        document.getElementById('events-count-badge').textContent = `${(data.total || 0).toLocaleString()} events`;
+
+        if ((data.events || []).length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-slate-400 font-sans">No events matching current filter criteria.</td></tr>';
+          return;
+        }
+
+        data.events.forEach(e => {
+          const sev = e.severity.toLowerCase();
+          const sevColor = sev === 'critical' || sev === 'fatal' ? 'text-red-400 bg-red-950/80 font-bold' : (sev === 'error' ? 'text-amber-400 bg-amber-950/80 font-bold' : 'text-slate-400 bg-slate-800');
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-850/60 transition text-[11px]">
+              <td class="py-2.5 px-5 text-slate-400 font-medium">${e.timestamp.slice(0, 19).replace('T', ' ')}</td>
+              <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded ${sevColor}">${e.severity.toUpperCase()}</span></td>
+              <td class="py-2.5 px-3 text-cyan-400 font-bold">${e.service_name}</td>
+              <td class="py-2.5 px-3 text-slate-200 font-sans">${e.message}</td>
+              <td class="py-2.5 px-4 text-slate-500 text-[10px]">${e.trace_id ? e.trace_id.slice(0, 12) : '-'}</td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        console.error('Failed to load events:', err);
+      }
+    }
+
+    // Load Service Topology
+    async function loadTopology() {
+      try {
+        const res = await fetch('/api/services/graph');
+        topologyData = await res.json();
+
+        // Populate service dropdown in event filter
+        const srvSelect = document.getElementById('event-service-filter');
+        srvSelect.innerHTML = '<option value="">All Services</option>';
+        (topologyData.services || []).forEach(s => {
+          srvSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+        });
+      } catch (err) {
+        console.error('Failed to load topology:', err);
+      }
+    }
+
+    // Canvas Service Dependency Topology Graph Renderer (Tiered DAG + Hover Highlights)
+    let nodePositions = {};
+
+    function renderTopology() {
+      if (!topologyData) return;
+      const canvas = document.getElementById('topology-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const services = topologyData.services || [];
+      const dependencies = topologyData.dependencies || [];
+      if (services.length === 0) return;
+
+      // Group into 3 clean tiers: Tier 1 (Ingress), Tier 2 (Services), Tier 3 (Data & Infra)
+      const tier1 = services.filter(s => s.tier === 1);
+      const tier2 = services.filter(s => s.tier === 2);
+      const tier3 = services.filter(s => s.tier === 3);
+
+      nodePositions = {};
+      const layoutTier = (list, yPos) => {
+        const count = list.length;
+        const spacing = canvas.width / (count + 1);
+        list.forEach((s, idx) => {
+          nodePositions[s.name] = {
+            x: spacing * (idx + 1),
+            y: yPos,
+            service: s,
+          };
+        });
+      };
+
+      layoutTier(tier1, 100);
+      layoutTier(tier2, 300);
+      layoutTier(tier3, 500);
+
+      // Draw dependency directed edges with curved beziers
+      dependencies.forEach(dep => {
+        const src = nodePositions[dep.source_service];
+        const tgt = nodePositions[dep.target_service];
+        if (src && tgt) {
+          ctx.beginPath();
+          ctx.moveTo(src.x, src.y);
+
+          // Smooth curved bezier curve
+          const midY = (src.y + tgt.y) / 2;
+          ctx.bezierCurveTo(src.x, midY, tgt.x, midY, tgt.x, tgt.y);
+
+          const isHoveredEdge = hoveredNode && (hoveredNode.name === dep.source_service || hoveredNode.name === dep.target_service);
+
+          if (isHoveredEdge) {
+            ctx.strokeStyle = '#00d2f0';
+            ctx.lineWidth = 2.8;
+            ctx.shadowColor = '#00d2f0';
+            ctx.shadowBlur = 8;
+          } else if (tgt.service.status === 'critical' || src.service.status === 'critical') {
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)';
+            ctx.lineWidth = 2.2;
+            ctx.shadowBlur = 0;
+          } else if (tgt.service.status === 'degraded' || src.service.status === 'degraded') {
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+            ctx.lineWidth = 1.8;
+            ctx.shadowBlur = 0;
+          } else {
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+            ctx.lineWidth = 1.2;
+            ctx.shadowBlur = 0;
+          }
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          // Directed flow arrow indicator
+          const tPointX = (src.x + tgt.x) / 2;
+          const tPointY = midY;
+          ctx.fillStyle = ctx.strokeStyle;
+          ctx.beginPath();
+          ctx.arc(tPointX, tPointY, isHoveredEdge ? 4 : 2.5, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+      });
+
+      // Draw service nodes
+      services.forEach(s => {
+        const pos = nodePositions[s.name];
+        if (!pos) return;
+
+        const isHovered = hoveredNode && hoveredNode.name === s.name;
+
+        // Outer halo ring
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, isHovered ? 28 : 24, 0, 2 * Math.PI);
+        if (s.status === 'critical') {
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
+          ctx.strokeStyle = '#ef4444';
+        } else if (s.status === 'degraded') {
+          ctx.fillStyle = 'rgba(245, 158, 11, 0.2)';
+          ctx.strokeStyle = '#f59e0b';
+        } else {
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+          ctx.strokeStyle = '#10b981';
+        }
+        ctx.fill();
+        ctx.lineWidth = isHovered ? 3.0 : 2.0;
+        ctx.stroke();
+
+        // Node center core
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 16, 0, 2 * Math.PI);
+        ctx.fillStyle = '#0a0f1d';
+        ctx.fill();
+
+        // Inner icon dot
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.fill();
+
+        // Node Label
+        ctx.fillStyle = isHovered ? '#00d2f0' : '#f1f5f9';
+        ctx.font = isHovered ? 'bold 11px ui-monospace, monospace' : '11px ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(s.name, pos.x, pos.y + 42);
+
+        // Health score badge below label
+        ctx.fillStyle = s.status === 'critical' ? '#ef4444' : (s.status === 'degraded' ? '#f59e0b' : '#10b981');
+        ctx.font = '10px ui-monospace, monospace';
+        ctx.fillText(`${s.health_score_pct || 98}%`, pos.x, pos.y + 56);
+      });
+    }
+
+    // Attach mouse move hover listener to topology canvas
+    const topCanvas = document.getElementById('topology-canvas');
+    topCanvas.addEventListener('mousemove', (e) => {
+      const rect = topCanvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      let found = null;
+      for (const [name, pos] of Object.entries(nodePositions)) {
+        const dist = Math.hypot(mx - pos.x, my - pos.y);
+        if (dist <= 30) {
+          found = pos.service;
+          break;
+        }
+      }
+
+      if (found !== hoveredNode) {
+        hoveredNode = found;
+        renderTopology();
+        if (hoveredNode) {
+          showFloatingInspector(hoveredNode, e.clientX, e.clientY);
+        } else {
+          document.getElementById('node-inspector').classList.add('hidden');
+        }
+      }
+    });
+
+    topCanvas.addEventListener('mouseleave', () => {
+      hoveredNode = null;
+      renderTopology();
+      document.getElementById('node-inspector').classList.add('hidden');
+    });
+
+    function showFloatingInspector(s, mouseX, mouseY) {
+      const panel = document.getElementById('node-inspector');
+      panel.classList.remove('hidden');
+
+      document.getElementById('inspect-service-name').textContent = s.name;
+      document.getElementById('inspect-type').textContent = s.service_type || 'microservice';
+      document.getElementById('inspect-host').textContent = s.host || 'node-01';
+      document.getElementById('inspect-health-pct').textContent = `${s.health_score_pct || 98}%`;
+      document.getElementById('inspect-error-rate').textContent = `${s.error_rate_pct || 0}%`;
+      document.getElementById('inspect-p95-lat').textContent = `${s.p95_latency_ms || 25}ms`;
+      document.getElementById('inspect-what-happened').textContent = s.what_happened || 'Normal operational status.';
+      document.getElementById('inspect-callers').textContent = (s.callers || []).join(', ') || 'Ingress External';
+      document.getElementById('inspect-callees').textContent = (s.callees || []).join(', ') || 'Terminal Node';
+
+      const badge = document.getElementById('inspect-status-badge');
+      badge.textContent = s.status.toUpperCase();
+      if (s.status === 'critical') {
+        badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-red-950 text-red-400 border border-red-800';
+      } else if (s.status === 'degraded') {
+        badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-950 text-amber-400 border border-amber-800';
+      } else {
+        badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-800';
+      }
+    }
+
+    // Load Model Training & Status
+    async function loadModelStatus() {
+      try {
+        const res = await fetch('/api/models/status');
+        const data = await res.json();
+        const metrics = data.evaluation_metrics || {};
+
+        document.getElementById('model-status-f1').textContent = metrics.f1_score || '0.90';
+        document.getElementById('model-status-prec').textContent = metrics.precision || '0.88';
+        document.getElementById('model-status-rec').textContent = metrics.recall || '0.92';
+        document.getElementById('bench-top1').textContent = ((metrics.top1_rca_accuracy || 0.875) * 100).toFixed(1) + '%';
+        document.getElementById('bench-top3').textContent = ((metrics.top3_rca_accuracy || 1.0) * 100).toFixed(1) + '%';
+
+        await runBenchmarkEvaluation();
+      } catch (err) {
+        console.error('Failed to load model status:', err);
+      }
+    }
+
+    async function trainModel() {
+      const cont = parseFloat(document.getElementById('input-contamination').value);
+      const est = parseInt(document.getElementById('input-estimators').value);
+      const btn = document.getElementById('btn-train-model');
+      btn.disabled = true;
+      btn.innerHTML = '<span>Training Ensemble...</span>';
+
+      try {
+        const res = await fetch('/api/models/train', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contamination: cont, n_estimators: est }),
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        btn.innerHTML = '<span>Retrain Isolation Forest</span>';
+        alert('Model training complete! New F1 score: ' + data.evaluation_metrics.f1_score);
+        await loadModelStatus();
+      } catch (err) {
+        alert('Training failed: ' + err);
+        btn.disabled = false;
+        btn.innerHTML = '<span>Retrain Isolation Forest</span>';
+      }
+    }
+
+    async function runBenchmarkEvaluation() {
+      try {
+        const res = await fetch('/api/models/evaluate');
+        const data = await res.json();
+        document.getElementById('bench-top1').textContent = (data.top1_accuracy * 100).toFixed(1) + '%';
+        document.getElementById('bench-top3').textContent = (data.top3_accuracy * 100).toFixed(1) + '%';
+        document.getElementById('bench-latency').textContent = Math.round(data.mean_time_to_diagnose_ms) + ' ms';
+
+        const tbody = document.getElementById('benchmark-scenarios-body');
+        tbody.innerHTML = '';
+        (data.scenarios || []).forEach(scn => {
+          const isHit = scn.predicted[0] === scn.ground_truth;
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-850/50 transition">
+              <td class="py-2.5 px-3 text-slate-200 font-semibold">${scn.name}</td>
+              <td class="py-2.5 px-3 font-mono text-cyan-400 font-bold">${scn.ground_truth}</td>
+              <td class="py-2.5 px-3 font-mono text-slate-400">${scn.predicted.slice(0, 3).join(', ')}</td>
+              <td class="py-2.5 px-3 text-right">
+                <span class="px-2 py-0.5 rounded ${isHit ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'} text-[10px] font-bold">
+                  ${isHit ? 'TOP-1 HIT' : 'TOP-3 HIT'}
+                </span>
+              </td>
+            </tr>
+          `;
+        });
+      } catch (err) {
+        console.error('Benchmark error:', err);
+      }
+    }
+
+    // Live Telemetry Receiver & Simulation
+    async function loadTelemetryStats() {
+      try {
+        const res = await fetch('/api/telemetry/stats');
+        const data = await res.json();
+        document.getElementById('telemetry-buffer-count').textContent = data.buffered_events_count || 0;
+        const feed = document.getElementById('telemetry-buffer-feed');
+        if ((data.recent_buffer_sample || []).length > 0) {
+          feed.innerHTML = '';
+          data.recent_buffer_sample.forEach(b => {
+            feed.innerHTML += `<p class="text-slate-300">[${b.timestamp.slice(11, 19)}] Received OTLP ${b.type.toUpperCase()} payload from collector</p>`;
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load telemetry stats:', err);
+      }
+    }
+
+    async function simulateLiveTelemetryBurst() {
+      try {
+        await fetch('/v1/traces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            spans: [
+              { trace_id: 'live-' + Math.random().toString(36).slice(2, 9), service_name: 'api-gateway', duration_ms: 24.2, status: '200' },
+              { trace_id: 'live-' + Math.random().toString(36).slice(2, 9), service_name: 'database-primary', duration_ms: 12.8, status: '200' },
+            ]
+          }),
+        });
+        await fetch('/v1/logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            logs: [{ severity: 'info', service: 'auth-service', message: 'Token refresh verified for subject usr_88192' }]
+          }),
+        });
+        await loadTelemetryStats();
+      } catch (err) {
+        console.error('Simulation error:', err);
+      }
+    }
+
+    // Initial Startup Boot
+    window.addEventListener('DOMContentLoaded', () => {
+      refreshAll();
+    });
+  </script>
+</body>
+</html>

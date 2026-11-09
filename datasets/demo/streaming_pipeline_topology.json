@@ -1,0 +1,34 @@
+{
+  "services": [
+    {
+      "name": "kafka-cluster",
+      "type": "broker",
+      "host": "kafka-01",
+      "description": "Apache Kafka Message Bus"
+    },
+    {
+      "name": "transcoder-worker",
+      "type": "worker",
+      "host": "worker-gpu-01",
+      "description": "H.264/AV1 Transcoder Worker"
+    },
+    {
+      "name": "video-ingest",
+      "type": "gateway",
+      "host": "ingest-01",
+      "description": "RTMP & WebRTC Ingest Gateway"
+    }
+  ],
+  "dependencies": [
+    {
+      "source": "video-ingest",
+      "target": "kafka-cluster",
+      "latency_p95": 5.4
+    },
+    {
+      "source": "transcoder-worker",
+      "target": "kafka-cluster",
+      "latency_p95": 45.0
+    }
+  ]
+}

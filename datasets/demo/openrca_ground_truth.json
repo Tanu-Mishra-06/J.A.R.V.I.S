@@ -1,0 +1,49 @@
+{
+  "dataset_name": "OpenRCA2-Lite-Evaluation-Suite",
+  "description": "Standardized Ground-Truth Root Cause Analysis Benchmark for Distributed Systems",
+  "total_incidents": 5,
+  "scenarios": [
+    {
+      "incident_id": "INC-001",
+      "domain": "Enterprise Cloud Microservices",
+      "ground_truth_root_cause": "database-primary",
+      "failure_type": "database_pool_exhaustion",
+      "symptom_services": [
+        "order-service",
+        "api-gateway"
+      ],
+      "evidence_metrics": [
+        "active_connections",
+        "cpu_utilization"
+      ]
+    },
+    {
+      "incident_id": "INC-002",
+      "domain": "Kubernetes Cloud Infrastructure",
+      "ground_truth_root_cause": "worker-node-01",
+      "failure_type": "memory_leak_oom",
+      "symptom_services": [
+        "coredns",
+        "ingress-nginx"
+      ],
+      "evidence_metrics": [
+        "memory_usage",
+        "container_restarts"
+      ]
+    },
+    {
+      "incident_id": "INC-003",
+      "domain": "Real-time Streaming Video Pipeline",
+      "ground_truth_root_cause": "kafka-cluster",
+      "failure_type": "kafka_partition_lag_storm",
+      "symptom_services": [
+        "transcoder-worker",
+        "video-ingest"
+      ],
+      "evidence_metrics": [
+        "consumer_lag",
+        "frame_drop_rate"
+      ]
+    }
+  ]
+}
