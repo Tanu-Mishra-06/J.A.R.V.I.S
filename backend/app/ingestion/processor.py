@@ -72,7 +72,7 @@ def process_dataset(dataset_id: str) -> Dict[str, Any]:
             for ev in result.events:
                 srv = ev.get("service_name")
                 if srv and srv != "unknown":
-                    Repository.upsert_service(srv, host=ev.get("host_name"))
+                    Repository.upsert_service(srv, dataset_id=dataset_id, host=ev.get("host_name"))
 
         # Insert metrics
         if result.metrics:
@@ -80,11 +80,15 @@ def process_dataset(dataset_id: str) -> Dict[str, Any]:
             for m in result.metrics:
                 srv = m.get("service_name")
                 if srv and srv != "unknown":
-                    Repository.upsert_service(srv, host=m.get("host_name"))
+                    Repository.upsert_service(srv, dataset_id=dataset_id, host=m.get("host_name"))
 
         # Insert traces
         if result.traces:
             Repository.insert_traces(result.traces)
+            for t in result.traces:
+                srv = t.get("service_name")
+                if srv and srv != "unknown":
+                    Repository.upsert_service(srv, dataset_id=dataset_id)
             # Build service dependencies from trace parent-child relationships
             span_map = {t["span_id"]: t for t in result.traces if t.get("span_id")}
             for t in result.traces:
@@ -96,7 +100,7 @@ def process_dataset(dataset_id: str) -> Dict[str, Any]:
                     if src_srv and tgt_srv and src_srv != tgt_srv:
                         latency = float(t.get("duration_ms", 10.0))
                         is_err = 1.0 if str(t.get("status_code", "200")).startswith(("4", "5")) else 0.0
-                        Repository.upsert_dependency(src_srv, tgt_srv, dep_type="sync_rpc", latency=latency, error_rate=is_err)
+                        Repository.upsert_dependency(src_srv, tgt_srv, dataset_id=dataset_id, dep_type="sync_rpc", latency=latency, error_rate=is_err)
 
         total_valid = len(result.events) + len(result.metrics) + len(result.traces)
         total_invalid = len(result.errors)

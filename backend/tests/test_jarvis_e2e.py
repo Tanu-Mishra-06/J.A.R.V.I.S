@@ -16,14 +16,21 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+root_dir = os.path.dirname(backend_dir)
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
+if root_dir not in sys.path:
+    sys.path.insert(0, root_dir)
 
 from app.main import app
+from app.core.config import settings
+from app.database.db import db
 from app.database.repository import Repository
 from app.intelligence.anomaly_detection.detector import AnomalyDetectionEngine
 from app.intelligence.anomaly_detection.zscore import ZScoreDetector
@@ -39,7 +46,34 @@ from app.intelligence.model_trainer import ModelTrainer
 class JarvisE2ETestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.temp_dir = tempfile.mkdtemp(prefix='jarvis_test_')
+        cls.test_db_path = os.path.join(cls.temp_dir, 'test_jarvis.db')
+        cls.orig_db_path = db.db_path
+        cls.orig_upload_dir = settings.UPLOAD_DIR
+
+        # Point upload dir to temp directory
+        cls.test_upload_dir = os.path.join(cls.temp_dir, 'uploads')
+        os.makedirs(cls.test_upload_dir, exist_ok=True)
+        settings.UPLOAD_DIR = cls.test_upload_dir
+
+        # Point database to isolated test database
+        db.set_db_path(cls.test_db_path)
+
+        # Seed the isolated test database so endpoints have data
+        from datasets.seed_data import seed_all
+        seed_all()
+
         cls.client = app.test_client()
+
+    @classmethod
+    def tearDownClass(cls):
+        # Restore original DB and upload directory
+        db.set_db_path(cls.orig_db_path)
+        settings.UPLOAD_DIR = cls.orig_upload_dir
+        try:
+            shutil.rmtree(cls.temp_dir, ignore_errors=True)
+        except Exception:
+            pass
 
     def test_01_dashboard_summary_api(self):
         """Verify GET /api/dashboard/summary returns real KPI metrics."""
@@ -192,6 +226,130 @@ class JarvisE2ETestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 201)
         ds = res.get_json()
         self.assertEqual(ds["name"], "Custom Cache Metrics Test")
+
+    def test_12_service_identity_composite_scoping(self):
+        """Verify service identity is (dataset_id, name) and datasets never collide."""
+        ds_a = Repository.create_dataset(name="Dataset Alpha", source_type="jsonl", file_path="alpha.jsonl")
+        ds_b = Repository.create_dataset(name="Dataset Beta", source_type="jsonl", file_path="beta.jsonl")
+
+        Repository.upsert_service("cache-layer", dataset_id=ds_a["id"], host="host-alpha-01", description="Redis Alpha")
+        Repository.upsert_service("cache-layer", dataset_id=ds_b["id"], host="host-beta-99", description="Memcached Beta")
+
+        Repository.upsert_dependency("api-gateway", "cache-layer", dataset_id=ds_a["id"])
+        Repository.upsert_dependency("checkout-svc", "cache-layer", dataset_id=ds_b["id"])
+
+        graph_a = Repository.get_service_graph(dataset_id=ds_a["id"])
+        graph_b = Repository.get_service_graph(dataset_id=ds_b["id"])
+
+        node_a = next((s for s in graph_a["services"] if s["name"] == "cache-layer"), None)
+        node_b = next((s for s in graph_b["services"] if s["name"] == "cache-layer"), None)
+
+        self.assertIsNotNone(node_a)
+        self.assertIsNotNone(node_b)
+        self.assertEqual(node_a["host"], "host-alpha-01")
+        self.assertEqual(node_b["host"], "host-beta-99")
+
+        edges_a = [f"{e['source_service']}->{e['target_service']}" for e in graph_a["dependencies"]]
+        edges_b = [f"{e['source_service']}->{e['target_service']}" for e in graph_b["dependencies"]]
+
+        self.assertIn("api-gateway->cache-layer", edges_a)
+        self.assertNotIn("checkout-svc->cache-layer", edges_a)
+        self.assertIn("checkout-svc->cache-layer", edges_b)
+        self.assertNotIn("api-gateway->cache-layer", edges_b)
+
+    def test_13_services_graph_scoping_and_dataset_incident_params(self):
+        """Verify /api/services/graph scopes to dataset_id and incident_id, never merging all datasets."""
+        datasets = Repository.list_datasets()
+        ms_ds = next((d for d in datasets if d["name"] == "Cloud Microservices Telemetry"), None)
+        k8s_ds = next((d for d in datasets if "Kubernetes" in d["name"]), None)
+        self.assertIsNotNone(ms_ds)
+        self.assertIsNotNone(k8s_ds)
+
+        # 1. Query by dataset_id for Microservices
+        res_ms = self.client.get(f"/api/services/graph?dataset_id={ms_ds['id']}")
+        self.assertEqual(res_ms.status_code, 200)
+        data_ms = res_ms.get_json()
+        names_ms = {s["name"] for s in data_ms["services"]}
+        self.assertIn("database-primary", names_ms)
+        self.assertNotIn("worker-node-01", names_ms)
+        self.assertNotIn("kafka-cluster", names_ms)
+
+        # 2. Query by dataset_id for Kubernetes
+        res_k8s = self.client.get(f"/api/services/graph?dataset_id={k8s_ds['id']}")
+        self.assertEqual(res_k8s.status_code, 200)
+        data_k8s = res_k8s.get_json()
+        names_k8s = {s["name"] for s in data_k8s["services"]}
+        self.assertIn("worker-node-01", names_k8s)
+        self.assertNotIn("database-primary", names_k8s)
+
+        # 3. Query by incident_id
+        incidents = Repository.list_incidents(dataset_id=ms_ds["id"])
+        self.assertGreater(len(incidents), 0)
+        inc_id = incidents[0]["id"]
+
+        res_inc = self.client.get(f"/api/services/graph?incident_id={inc_id}")
+        self.assertEqual(res_inc.status_code, 200)
+        data_inc = res_inc.get_json()
+        self.assertEqual(data_inc.get("incident_id"), inc_id)
+        names_inc = {s["name"] for s in data_inc["services"]}
+        self.assertIn("database-primary", names_inc)
+        self.assertNotIn("worker-node-01", names_inc)
+
+        # 4. Default call (no params) returns a single scoped dataset, not all datasets merged
+        res_def = self.client.get("/api/services/graph")
+        self.assertEqual(res_def.status_code, 200)
+        data_def = res_def.get_json()
+        names_def = {s["name"] for s in data_def["services"]}
+        # Cannot contain both microservices and k8s nodes in a single scoped graph
+        self.assertFalse("database-primary" in names_def and "worker-node-01" in names_def)
+
+    def test_14_data_driven_narrative_healthy_service_never_degraded(self):
+        """Verify narratives are data-driven and healthy services (e.g. auth-service) are never degraded."""
+        datasets = Repository.list_datasets()
+        ms_ds = next((d for d in datasets if d["name"] == "Cloud Microservices Telemetry"), None)
+        self.assertIsNotNone(ms_ds)
+
+        res = self.client.get(f"/api/services/graph?dataset_id={ms_ds['id']}")
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        services_by_name = {s["name"]: s for s in data["services"]}
+
+        # auth-service is healthy (0 errors) -> MUST never be described as degraded or a symptom
+        auth = services_by_name.get("auth-service")
+        self.assertIsNotNone(auth)
+        self.assertEqual(auth["status"], "healthy")
+        self.assertEqual(auth["error_rate_pct"], 0.0)
+        self.assertTrue(auth["what_happened"].startswith("Healthy:"))
+        self.assertNotIn("degraded", auth["what_happened"].lower())
+        self.assertNotIn("symptom", auth["what_happened"].lower())
+        self.assertNotIn("pool contention", auth["what_happened"].lower())
+
+        # database-primary is the root cause component
+        db_primary = services_by_name.get("database-primary")
+        self.assertIsNotNone(db_primary)
+        self.assertIn(db_primary["status"], ("critical", "degraded"))
+        self.assertIn("Root Cause Component:", db_primary["what_happened"])
+
+        # order-service is impacted by database-primary
+        order = services_by_name.get("order-service")
+        self.assertIsNotNone(order)
+        self.assertIn("Cascading Degradation:", order["what_happened"])
+
+    def test_15_metric_only_dataset_services_counted(self):
+        """Verify metric-only datasets discover, count, and display services in study reports."""
+        datasets = Repository.list_datasets()
+        metric_ds = next((d for d in datasets if d["name"] == "Microservices System Metrics"), None)
+        self.assertIsNotNone(metric_ds)
+
+        # Generate study report for metric-only dataset
+        report = Repository.generate_dataset_study_report(metric_ds["id"])
+        self.assertIsNotNone(report)
+        self.assertGreater(report["services_count"], 0)
+        self.assertGreater(len(report["services"]), 0)
+
+        service_names = {s["service_name"] for s in report["services"]}
+        self.assertIn("database-primary", service_names)
+        self.assertIn("order-service", service_names)
 
 
 if __name__ == "__main__":

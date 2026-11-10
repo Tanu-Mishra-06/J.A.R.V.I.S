@@ -379,9 +379,25 @@ def get_events_list():
 
 @app.route("/api/services/graph", methods=["GET"])
 def get_service_topology():
-    graph = Repository.get_service_graph()
+    dataset_id = request.args.get("dataset_id")
+    incident_id = request.args.get("incident_id")
+
+    incident = None
+    if incident_id:
+        incident = Repository.get_incident(incident_id)
+        if incident and not dataset_id:
+            dataset_id = incident.get("dataset_id")
+
+    graph = Repository.get_service_graph(dataset_id=dataset_id)
     services = graph.get("services", [])
     dependencies = graph.get("dependencies", [])
+    active_dataset_id = graph.get("dataset_id")
+
+    # If no incident was found by incident_id, look for one for this dataset
+    if not incident and active_dataset_id:
+        incidents = Repository.list_incidents(dataset_id=active_dataset_id)
+        if incidents:
+            incident = incidents[0]
 
     # Build caller and callee adjacency
     caller_map = {}
@@ -392,22 +408,16 @@ def get_service_topology():
         callee_map.setdefault(src, []).append(tgt)
         caller_map.setdefault(tgt, []).append(src)
 
-    # Narrative explanation mapping for real-world scenarios
-    narratives = {
-        "database-primary": "Root Cause Component: Connection pool saturated at 1000/1000 limit. Active queries blocked holding exclusive table locks, causing cascading thread starvation on caller services.",
-        "order-service": "Cascading Degradation: Blocked waiting for database connection pool release. Client threads timed out after 30s, returning 500 errors to API Gateway.",
-        "api-gateway": "Edge Symptom: Returned 504 Gateway Timeouts to end users due to stalled responses from downstream services.",
-        "worker-node-01": "Root Cause Node: Physical node RAM saturated. Linux kernel OOM-killer triggered, terminating CoreDNS process.",
-        "coredns": "Cascade Victim: Terminated by host OOM-killer, causing cluster-wide DNS resolution failures and dial timeouts.",
-        "ingress-nginx": "Downstream Symptom: Upstream connection timeout when routing traffic to kube-apiserver and worker pods.",
-        "kafka-cluster": "Root Cause Broker: Partition rebalance storm triggered consumer lag surge exceeding 150,000 records.",
-        "transcoder-worker": "Downstream Symptom: Frame buffer overflow due to Kafka consumer lag, dropping 450 frames on live stream.",
-        "video-ingest": "Active: RTMP/WebRTC streams receiving normal ingress traffic.",
-        "auth-service": "Degraded Dependency: Auth token database lookups delayed due to shared database-primary pool contention.",
-        "redis-cache": "Healthy: In-memory cache hit ratio at 94.2%, latency < 3.2ms.",
-        "inventory-service": "Healthy: Operating normally with minimal error rate (<0.1%).",
-        "kube-apiserver": "Healthy: Control plane operational, experiencing intermittent DNS resolution retries from ingress.",
-    }
+    service_status_map = {s["name"]: s.get("status", "healthy") for s in services}
+
+    # Extract incident RCA and impact context if available
+    rc_service = incident.get("root_cause_service") if incident else None
+    rc_type = (incident.get("root_cause_type") or "failure").replace("_", " ").title() if incident else "Failure"
+    rc_conf = round(float(incident.get("confidence_score", 0.0)) * 100) if incident else 0
+
+    impact = Repository.get_impact_report(incident["id"]) if incident else None
+    direct_svcs = set(impact.get("direct_services", [])) if impact else set()
+    downstream_svcs = set(impact.get("downstream_services", [])) if impact else set()
 
     # Tier assignment for clean DAG layout
     def get_tier(name: str, s_type: str) -> int:
@@ -438,7 +448,36 @@ def get_service_topology():
             err_rate = 0.0
             p95 = round(float(s.get("avg_latency", 15.0)), 0)
 
-        what_happened = narratives.get(srv_name, f"{status.capitalize()}: Operating with {errs} error events and {anoms} detected anomalies.")
+        # Data-driven narrative generation:
+        if status == "healthy":
+            # A healthy service must NEVER be described as degraded or a symptom
+            what_happened = f"Healthy: Operating within baseline latency ({int(p95)}ms) and zero error rate."
+        elif srv_name == rc_service:
+            what_happened = (
+                f"Root Cause Component: Identified as primary origin of incident ({rc_type}) "
+                f"with {rc_conf}% confidence. Logged {errs} errors and {anoms} anomalies."
+            )
+        else:
+            # Service is degraded or critical
+            degraded_callees = [c for c in callee_map.get(srv_name, []) if service_status_map.get(c) in ("critical", "degraded") or c == rc_service]
+            degraded_callers = [c for c in caller_map.get(srv_name, []) if service_status_map.get(c) in ("critical", "degraded")]
+
+            if degraded_callees:
+                what_happened = (
+                    f"Cascading Degradation: Impacted by upstream failure in dependency ({', '.join(degraded_callees)}). "
+                    f"Logged {errs} errors ({err_rate}% error rate) with elevated latency ({int(p95)}ms)."
+                )
+            elif degraded_callers:
+                what_happened = (
+                    f"Downstream Symptom: Experiencing {errs} error events and {anoms} anomaly spikes "
+                    f"under caller load ({', '.join(degraded_callers)})."
+                )
+            elif srv_name in direct_svcs:
+                what_happened = f"Directly Impacted: Correlated with root cause {rc_service}. Logged {errs} errors ({err_rate}% error rate)."
+            elif srv_name in downstream_svcs:
+                what_happened = f"Cascade Victim: Degraded due to fault propagation from {rc_service}. Logged {errs} errors."
+            else:
+                what_happened = f"{status.capitalize()}: Operating with {errs} error events and {anoms} detected anomalies."
 
         s_copy = dict(s)
         s_copy["health_score_pct"] = health_score
@@ -450,7 +489,12 @@ def get_service_topology():
         s_copy["callees"] = callee_map.get(srv_name, [])
         enriched_services.append(s_copy)
 
-    return jsonify({"services": enriched_services, "dependencies": dependencies}), 200
+    return jsonify({
+        "services": enriched_services,
+        "dependencies": dependencies,
+        "dataset_id": active_dataset_id,
+        "incident_id": incident.get("id") if incident else None,
+    }), 200
 
 
 @app.route("/api/dashboard/summary", methods=["GET"])

@@ -61,11 +61,11 @@ KNOWN_FAILURE_PATTERNS = [
 class RootCauseAnalyzer:
     """Ranks likely root causes with explicit evidence citations and uncertainty."""
 
-    def __init__(self, topo_graph: Optional[nx.DiGraph] = None):
-        self.topo_graph = topo_graph or self._build_graph()
+    def __init__(self, topo_graph: Optional[nx.DiGraph] = None, dataset_id: Optional[str] = None):
+        self.topo_graph = topo_graph or self._build_graph(dataset_id=dataset_id)
 
-    def _build_graph(self) -> nx.DiGraph:
-        graph_data = Repository.get_service_graph()
+    def _build_graph(self, dataset_id: Optional[str] = None) -> nx.DiGraph:
+        graph_data = Repository.get_service_graph(dataset_id=dataset_id)
         g = nx.DiGraph()
         for s in graph_data.get("services", []):
             g.add_node(s["name"], **s)
@@ -85,6 +85,8 @@ class RootCauseAnalyzer:
         incident_events: List[Dict[str, Any]],
         dataset_id: str,
     ) -> List[Dict[str, Any]]:
+        if dataset_id:
+            self.topo_graph = self._build_graph(dataset_id=dataset_id)
         """Evaluate evidence across incident events & metrics to rank root cause candidates."""
         if not incident_events:
             return [{

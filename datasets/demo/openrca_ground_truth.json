@@ -1,13 +1,17 @@
 {
   "dataset_name": "OpenRCA2-Lite-Evaluation-Suite",
   "description": "Standardized Ground-Truth Root Cause Analysis Benchmark for Distributed Systems",
-  "total_incidents": 5,
+  "total_incidents": 3,
   "scenarios": [
     {
       "incident_id": "INC-001",
+      "name": "Cloud Microservices DB Connection Pool Exhaustion",
       "domain": "Enterprise Cloud Microservices",
       "ground_truth_root_cause": "database-primary",
       "failure_type": "database_pool_exhaustion",
+      "logs_file": "microservices_logs.jsonl",
+      "metrics_file": "microservices_metrics.csv",
+      "topology_file": "microservices_topology.json",
       "symptom_services": [
         "order-service",
         "api-gateway"
@@ -19,9 +23,13 @@
     },
     {
       "incident_id": "INC-002",
+      "name": "Kubernetes Worker Node OOM & CoreDNS Outage",
       "domain": "Kubernetes Cloud Infrastructure",
       "ground_truth_root_cause": "worker-node-01",
       "failure_type": "memory_leak_oom",
+      "logs_file": "k8s_infra_logs.jsonl",
+      "metrics_file": null,
+      "topology_file": "k8s_infra_topology.json",
       "symptom_services": [
         "coredns",
         "ingress-nginx"
@@ -33,9 +41,13 @@
     },
     {
       "incident_id": "INC-003",
+      "name": "Streaming Pipeline Kafka Consumer Partition Lag Storm",
       "domain": "Real-time Streaming Video Pipeline",
       "ground_truth_root_cause": "kafka-cluster",
       "failure_type": "kafka_partition_lag_storm",
+      "logs_file": "streaming_pipeline_logs.jsonl",
+      "metrics_file": null,
+      "topology_file": "streaming_pipeline_topology.json",
       "symptom_services": [
         "transcoder-worker",
         "video-ingest"

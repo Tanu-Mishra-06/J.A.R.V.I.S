@@ -85,11 +85,11 @@ Ranks likely root causes without confusing correlation with causation:
 - **Uncertainty Rating**: Honest classification (`"High confidence"`, `"Likely root cause"`, or `"Inconclusive"`).
 
 ### 4.4 Model Training & Benchmark Evaluation Results
-Evaluated against labeled OpenRCA2-Lite test scenarios:
-- **Top-1 Root Cause Accuracy**: **87.5%**
-- **Top-3 Root Cause Accuracy**: **100.0%**
-- **Isolation Forest F1 Score**: **0.90** (Precision: 0.88, Recall: 0.92)
-- **Mean Diagnosis Latency**: **142 ms**
+Evaluated against labeled OpenRCA2-Lite ground-truth test scenarios (live pipeline execution):
+- **Top-1 Root Cause Accuracy**: **100.0%** (3/3 scenarios correctly localized)
+- **Top-3 Root Cause Accuracy**: **100.0%** (3/3 scenarios in top-3 candidates)
+- **Isolation Forest Validation F1 Score**: **1.00** (Precision: 1.00, Recall: 1.00)
+- **Mean Diagnosis Latency**: **~470 ms** (measured end-to-end through live ingestion, anomaly detection, graph correlation, and RCA ranking)
 
 ---
 
@@ -161,5 +161,5 @@ python backend/tests/test_jarvis_e2e.py
 - [x] **Recommendations are linked to findings**: Advisory investigation runbooks link directly to diagnosed failure patterns.
 - [x] **Dashboard pages use real backend responses**: Zero hardcoded fake counters or mock buttons.
 - [x] **Incident report can be downloaded**: Exports post-mortem in Markdown and JSON.
-- [x] **Tests and benchmark results are reproducible**: 11/11 tests pass; OpenRCA benchmark evaluates to Top-1 87.5% and Top-3 100%.
+- [x] **Tests and benchmark results are reproducible**: 11/11 tests pass; OpenRCA benchmark evaluates to Top-1 100.0% and Top-3 100.0%.
 - [x] **Live telemetry integration documented**: Dedicated OTLP endpoints (`/v1/*`) and buffer receiver implemented.

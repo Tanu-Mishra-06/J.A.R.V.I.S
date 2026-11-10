@@ -37,16 +37,6 @@ def seed_all():
     ms_metrics_path = os.path.join(demo_dir, "microservices_metrics.csv")
     ms_topo_path = os.path.join(demo_dir, "microservices_topology.json")
 
-    # Load topology
-    if os.path.exists(ms_topo_path):
-        with open(ms_topo_path, "r", encoding="utf-8") as f:
-            topo = json.load(f)
-            for s in topo.get("services", []):
-                Repository.upsert_service(s["name"], s.get("type", "service"), s.get("host"), s.get("description"))
-            for d in topo.get("dependencies", []):
-                Repository.upsert_dependency(d["source"], d["target"], latency=d.get("latency_p95", 10.0))
-
-    # Register and process microservices logs
     ds_ms = Repository.create_dataset(
         name="Cloud Microservices Telemetry",
         description="Distributed e-commerce microservices with cascading DB connection pool exhaustion",
@@ -55,6 +45,15 @@ def seed_all():
         metadata={"domain": "microservices", "services_count": 6},
         is_demo=True,
     )
+
+    # Load topology scoped to ds_ms
+    if os.path.exists(ms_topo_path):
+        with open(ms_topo_path, "r", encoding="utf-8") as f:
+            topo = json.load(f)
+            for s in topo.get("services", []):
+                Repository.upsert_service(s["name"], dataset_id=ds_ms["id"], service_type=s.get("type", "service"), host=s.get("host"), description=s.get("description"))
+            for d in topo.get("dependencies", []):
+                Repository.upsert_dependency(d["source"], d["target"], dataset_id=ds_ms["id"], latency=d.get("latency_p95", 10.0))
     print(f"Created dataset: {ds_ms['name']} ({ds_ms['id']})")
     proc_res = process_dataset(ds_ms["id"])
     print(f"  Processed {proc_res.get('valid_records', 0)} records.")
@@ -73,13 +72,6 @@ def seed_all():
     # 2. Kubernetes Infrastructure Dataset
     k8s_topo_path = os.path.join(demo_dir, "k8s_infra_topology.json")
     k8s_logs_path = os.path.join(demo_dir, "k8s_infra_logs.jsonl")
-    if os.path.exists(k8s_topo_path):
-        with open(k8s_topo_path, "r", encoding="utf-8") as f:
-            topo = json.load(f)
-            for s in topo.get("services", []):
-                Repository.upsert_service(s["name"], s.get("type", "k8s_node"), s.get("host"), s.get("description"))
-            for d in topo.get("dependencies", []):
-                Repository.upsert_dependency(d["source"], d["target"], latency=d.get("latency_p95", 5.0))
 
     ds_k8s = Repository.create_dataset(
         name="Kubernetes Infrastructure Cluster Logs",
@@ -89,18 +81,19 @@ def seed_all():
         metadata={"domain": "infrastructure", "platform": "kubernetes"},
         is_demo=True,
     )
+
+    if os.path.exists(k8s_topo_path):
+        with open(k8s_topo_path, "r", encoding="utf-8") as f:
+            topo = json.load(f)
+            for s in topo.get("services", []):
+                Repository.upsert_service(s["name"], dataset_id=ds_k8s["id"], service_type=s.get("type", "k8s_node"), host=s.get("host"), description=s.get("description"))
+            for d in topo.get("dependencies", []):
+                Repository.upsert_dependency(d["source"], d["target"], dataset_id=ds_k8s["id"], latency=d.get("latency_p95", 5.0))
     process_dataset(ds_k8s["id"])
 
     # 3. Streaming Video Pipeline Dataset
     stream_topo_path = os.path.join(demo_dir, "streaming_pipeline_topology.json")
     stream_logs_path = os.path.join(demo_dir, "streaming_pipeline_logs.jsonl")
-    if os.path.exists(stream_topo_path):
-        with open(stream_topo_path, "r", encoding="utf-8") as f:
-            topo = json.load(f)
-            for s in topo.get("services", []):
-                Repository.upsert_service(s["name"], s.get("type", "streaming"), s.get("host"), s.get("description"))
-            for d in topo.get("dependencies", []):
-                Repository.upsert_dependency(d["source"], d["target"], latency=d.get("latency_p95", 15.0))
 
     ds_stream = Repository.create_dataset(
         name="Streaming Video Pipeline Telemetry",
@@ -110,6 +103,14 @@ def seed_all():
         metadata={"domain": "data_streaming", "broker": "kafka"},
         is_demo=True,
     )
+
+    if os.path.exists(stream_topo_path):
+        with open(stream_topo_path, "r", encoding="utf-8") as f:
+            topo = json.load(f)
+            for s in topo.get("services", []):
+                Repository.upsert_service(s["name"], dataset_id=ds_stream["id"], service_type=s.get("type", "streaming"), host=s.get("host"), description=s.get("description"))
+            for d in topo.get("dependencies", []):
+                Repository.upsert_dependency(d["source"], d["target"], dataset_id=ds_stream["id"], latency=d.get("latency_p95", 15.0))
     process_dataset(ds_stream["id"])
 
     # 4. LogHub HDFS Dataset

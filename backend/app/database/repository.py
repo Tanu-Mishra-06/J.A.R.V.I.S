@@ -384,47 +384,93 @@ class Repository:
     # Services & Dependencies (Topology)
     # -------------------------------------------------------------------------
     @staticmethod
-    def upsert_service(name: str, service_type: str = "service", host: Optional[str] = None, description: Optional[str] = None) -> None:
+    def upsert_service(
+        name: str,
+        dataset_id: Optional[str] = None,
+        service_type: str = "service",
+        host: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> None:
         now = utc_now_iso()
         with db.get_connection() as conn:
+            if not dataset_id:
+                row = conn.execute("SELECT id FROM datasets ORDER BY created_at DESC LIMIT 1").fetchone()
+                dataset_id = row[0] if row else "default"
             conn.execute(
                 """
-                INSERT INTO services (name, service_type, host, description, created_at)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(name) DO UPDATE SET
+                INSERT INTO services (dataset_id, name, service_type, host, description, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(dataset_id, name) DO UPDATE SET
                     service_type = excluded.service_type,
                     host = excluded.host,
                     description = excluded.description
                 """,
-                (name, service_type, host or f"{name}-node", description or f"{name} service", now),
+                (dataset_id, name, service_type, host or f"{name}-node", description or f"{name} service", now),
             )
             conn.commit()
 
     @staticmethod
-    def upsert_dependency(source: str, target: str, dep_type: str = "sync_http", latency: float = 0.0, error_rate: float = 0.0) -> None:
+    def upsert_dependency(
+        source: str,
+        target: str,
+        dataset_id: Optional[str] = None,
+        dep_type: str = "sync_http",
+        latency: float = 0.0,
+        error_rate: float = 0.0,
+    ) -> None:
         now = utc_now_iso()
-        dep_id = f"{source}->{target}"
         with db.get_connection() as conn:
-            # Ensure services exist first
-            Repository.upsert_service(source)
-            Repository.upsert_service(target)
+            if not dataset_id:
+                row = conn.execute("SELECT id FROM datasets ORDER BY created_at DESC LIMIT 1").fetchone()
+                dataset_id = row[0] if row else "default"
+            dep_id = f"{dataset_id}:{source}->{target}"
+            # Ensure services exist without overwriting their existing metadata
             conn.execute(
                 """
-                INSERT INTO service_dependencies (id, source_service, target_service, dependency_type, latency_p95, error_rate, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT OR IGNORE INTO services (dataset_id, name, service_type, host, description, created_at)
+                VALUES (?, ?, 'service', ?, ?, ?)
+                """,
+                (dataset_id, source, f"{source}-node", f"{source} service", now),
+            )
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO services (dataset_id, name, service_type, host, description, created_at)
+                VALUES (?, ?, 'service', ?, ?, ?)
+                """,
+                (dataset_id, target, f"{target}-node", f"{target} service", now),
+            )
+            conn.execute(
+                """
+                INSERT INTO service_dependencies (id, dataset_id, source_service, target_service, dependency_type, latency_p95, error_rate, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     dependency_type = excluded.dependency_type,
                     latency_p95 = excluded.latency_p95,
                     error_rate = excluded.error_rate
                 """,
-                (dep_id, source, target, dep_type, latency, error_rate, now),
+                (dep_id, dataset_id, source, target, dep_type, latency, error_rate, now),
             )
             conn.commit()
 
     @staticmethod
-    def get_service_graph() -> Dict[str, Any]:
+    def get_service_graph(dataset_id: Optional[str] = None) -> Dict[str, Any]:
         with db.get_connection() as conn:
-            # Get services with live health / anomaly metrics
+            if not dataset_id:
+                # Default to the most recent dataset (preferring one with service dependencies)
+                ds_row = conn.execute("""
+                    SELECT id FROM datasets
+                    WHERE id IN (SELECT dataset_id FROM service_dependencies)
+                    ORDER BY created_at DESC LIMIT 1
+                """).fetchone()
+                if not ds_row:
+                    ds_row = conn.execute("SELECT id FROM datasets ORDER BY created_at DESC LIMIT 1").fetchone()
+                if ds_row:
+                    dataset_id = ds_row[0]
+
+            if not dataset_id:
+                return {"services": [], "dependencies": [], "dataset_id": None}
+
+            # Query services for this specific dataset
             cur_s = conn.execute("""
                 SELECT s.*,
                     COALESCE(e.error_count, 0) as error_count,
@@ -436,19 +482,58 @@ class Repository:
                            SUM(CASE WHEN LOWER(severity) IN ('error', 'critical', 'fatal') THEN 1 ELSE 0 END) as error_count,
                            SUM(CASE WHEN is_anomaly = 1 THEN 1 ELSE 0 END) as anomaly_count
                     FROM events
+                    WHERE dataset_id = ?
                     GROUP BY service_name
                 ) e ON s.name = e.service_name
                 LEFT JOIN (
                     SELECT service_name, AVG(metric_value) as avg_latency
                     FROM metrics
-                    WHERE metric_name LIKE '%latency%'
+                    WHERE dataset_id = ? AND metric_name LIKE '%latency%'
                     GROUP BY service_name
                 ) m ON s.name = m.service_name
-            """)
-            nodes = []
-            for r in cur_s.fetchall():
-                node = dict(r)
-                # Compute health status
+                WHERE s.dataset_id = ?
+            """, (dataset_id, dataset_id, dataset_id))
+            nodes = [dict(r) for r in cur_s.fetchall()]
+
+            # Fallback auto-discovery if services table doesn't have rows for this dataset yet
+            if not nodes:
+                cur_discovered = conn.execute("""
+                    SELECT DISTINCT s_name FROM (
+                        SELECT service_name as s_name FROM events WHERE dataset_id = ? AND service_name != 'unknown'
+                        UNION
+                        SELECT service_name as s_name FROM metrics WHERE dataset_id = ? AND service_name != 'unknown'
+                        UNION
+                        SELECT service_name as s_name FROM traces WHERE dataset_id = ? AND service_name != 'unknown'
+                    )
+                """, (dataset_id, dataset_id, dataset_id)).fetchall()
+                for d_row in cur_discovered:
+                    Repository.upsert_service(d_row[0], dataset_id=dataset_id)
+                # Re-query
+                cur_s2 = conn.execute("""
+                    SELECT s.*,
+                        COALESCE(e.error_count, 0) as error_count,
+                        COALESCE(e.anomaly_count, 0) as anomaly_count,
+                        COALESCE(m.avg_latency, 0.0) as avg_latency
+                    FROM services s
+                    LEFT JOIN (
+                        SELECT service_name,
+                               SUM(CASE WHEN LOWER(severity) IN ('error', 'critical', 'fatal') THEN 1 ELSE 0 END) as error_count,
+                               SUM(CASE WHEN is_anomaly = 1 THEN 1 ELSE 0 END) as anomaly_count
+                        FROM events
+                        WHERE dataset_id = ?
+                        GROUP BY service_name
+                    ) e ON s.name = e.service_name
+                    LEFT JOIN (
+                        SELECT service_name, AVG(metric_value) as avg_latency
+                        FROM metrics
+                        WHERE dataset_id = ? AND metric_name LIKE '%latency%'
+                        GROUP BY service_name
+                    ) m ON s.name = m.service_name
+                    WHERE s.dataset_id = ?
+                """, (dataset_id, dataset_id, dataset_id))
+                nodes = [dict(r) for r in cur_s2.fetchall()]
+
+            for node in nodes:
                 if node["anomaly_count"] > 10 or node["error_count"] > 15:
                     status = "critical"
                 elif node["anomaly_count"] > 0 or node["error_count"] > 0:
@@ -456,12 +541,11 @@ class Repository:
                 else:
                     status = "healthy"
                 node["status"] = status
-                nodes.append(node)
 
-            cur_e = conn.execute("SELECT * FROM service_dependencies")
+            cur_e = conn.execute("SELECT * FROM service_dependencies WHERE dataset_id = ?", (dataset_id,))
             edges = [dict(r) for r in cur_e.fetchall()]
 
-            return {"services": nodes, "dependencies": edges}
+            return {"services": nodes, "dependencies": edges, "dataset_id": dataset_id}
 
     # -------------------------------------------------------------------------
     # Incidents & Investigation
@@ -529,6 +613,13 @@ class Repository:
         with db.get_connection() as conn:
             cur = conn.execute(query, params)
             return [dict(r) for r in cur.fetchall()]
+
+    @staticmethod
+    def delete_incidents_by_dataset(dataset_id: str) -> None:
+        """Delete all existing incidents and their cascades for a dataset before re-analyzing."""
+        with db.get_connection() as conn:
+            conn.execute("DELETE FROM incidents WHERE dataset_id = ?", (dataset_id,))
+            conn.commit()
 
     @staticmethod
     def link_incident_events(incident_id: str, event_links: List[Dict[str, Any]]) -> None:
@@ -878,8 +969,18 @@ class Repository:
                 FROM events
             """).fetchone()
 
-            # Total services
-            cur_srv = conn.execute("SELECT COUNT(*) FROM services").fetchone()
+            # Total services (distinct across services, events, metrics, traces)
+            cur_srv = conn.execute("""
+                SELECT COUNT(DISTINCT s_name) FROM (
+                    SELECT name as s_name FROM services
+                    UNION
+                    SELECT service_name as s_name FROM events WHERE service_name != 'unknown'
+                    UNION
+                    SELECT service_name as s_name FROM metrics WHERE service_name != 'unknown'
+                    UNION
+                    SELECT service_name as s_name FROM traces WHERE service_name != 'unknown'
+                )
+            """).fetchone()
 
             # Datasets count
             cur_ds = conn.execute("SELECT COUNT(*) FROM datasets").fetchone()
@@ -934,13 +1035,34 @@ class Repository:
             sev_breakdown = {r["severity"]: r["count"] for r in cur_sev}
             sev_anoms = sum(r["anom_count"] or 0 for r in cur_sev)
 
-            # Services in dataset
+            # Services in dataset from events, metrics, traces, and services table
             cur_srv = conn.execute("""
-                SELECT service_name, COUNT(*) as count,
-                       SUM(CASE WHEN LOWER(severity) IN ('error', 'critical', 'fatal') THEN 1 ELSE 0 END) as errs
-                FROM events WHERE dataset_id = ?
-                GROUP BY service_name ORDER BY errs DESC, count DESC
-            """, (dataset_id,)).fetchall()
+                SELECT
+                    s_name as service_name,
+                    SUM(event_count) as count,
+                    SUM(err_count) as errs
+                FROM (
+                    SELECT service_name as s_name, COUNT(*) as event_count,
+                           SUM(CASE WHEN LOWER(severity) IN ('error', 'critical', 'fatal') THEN 1 ELSE 0 END) as err_count
+                    FROM events WHERE dataset_id = ?
+                    GROUP BY service_name
+                    UNION ALL
+                    SELECT service_name as s_name, COUNT(*) as event_count,
+                           SUM(CASE WHEN is_anomaly = 1 THEN 1 ELSE 0 END) as err_count
+                    FROM metrics WHERE dataset_id = ?
+                    GROUP BY service_name
+                    UNION ALL
+                    SELECT service_name as s_name, COUNT(*) as event_count, 0 as err_count
+                    FROM traces WHERE dataset_id = ?
+                    GROUP BY service_name
+                    UNION ALL
+                    SELECT name as s_name, 0 as event_count, 0 as err_count
+                    FROM services WHERE dataset_id = ?
+                )
+                WHERE s_name != 'unknown'
+                GROUP BY s_name
+                ORDER BY errs DESC, count DESC
+            """, (dataset_id, dataset_id, dataset_id, dataset_id)).fetchall()
             services_found = [dict(r) for r in cur_srv]
 
             # Metrics profile

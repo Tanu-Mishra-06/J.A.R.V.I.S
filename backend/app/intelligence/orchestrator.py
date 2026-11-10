@@ -84,6 +84,9 @@ class AnalysisOrchestrator:
             impact_engine = ImpactAnalysisEngine()
             created_incidents = []
 
+            # Ensure pipeline idempotency: replace any previous incidents for this dataset
+            Repository.delete_incidents_by_dataset(dataset_id)
+
             for cluster in clusters:
                 events_in_cluster = cluster["events"]
                 rca_candidates = rca_engine.analyze_incident(events_in_cluster, dataset_id)
@@ -127,7 +130,7 @@ class AnalysisOrchestrator:
                 Repository.insert_root_cause_candidates(rca_candidates)
 
                 # Evaluate Impact
-                impact = impact_engine.evaluate_impact(root_service, events_in_cluster)
+                impact = impact_engine.evaluate_impact(root_service, events_in_cluster, dataset_id=dataset_id)
                 Repository.upsert_impact_report(
                     incident_id=inc_id,
                     direct_services=impact["direct_services"],
