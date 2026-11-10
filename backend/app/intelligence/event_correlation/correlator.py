@@ -45,9 +45,9 @@ class EventCorrelator:
         self.w_host = w_host
         self.min_correlation_threshold = min_correlation_threshold
 
-    def build_topology_graph(self) -> nx.DiGraph:
+    def build_topology_graph(self, dataset_id: Optional[str] = None) -> nx.DiGraph:
         """Construct a NetworkX directed graph from known service dependencies."""
-        graph_data = Repository.get_service_graph()
+        graph_data = Repository.get_service_graph(dataset_id=dataset_id)
         g = nx.DiGraph()
         for s in graph_data.get("services", []):
             g.add_node(s["name"], **s)
@@ -145,7 +145,7 @@ class EventCorrelator:
         # Sort by timestamp
         anomalous_events.sort(key=lambda x: x["timestamp"])
 
-        topo = self.build_topology_graph()
+        topo = self.build_topology_graph(dataset_id=dataset_id)
 
         # Build correlation graph where edge exists if correlation score >= threshold
         cg = nx.Graph()

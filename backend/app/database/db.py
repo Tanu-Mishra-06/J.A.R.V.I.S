@@ -9,9 +9,11 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import threading
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Generator, List, Optional, Tuple
 
 
 def utc_now_iso() -> str:
@@ -20,23 +22,112 @@ def utc_now_iso() -> str:
 
 
 class Database:
-    """Encapsulates SQLite connection management and repository methods."""
+    """Encapsulates SQLite connection management and repository methods with thread-local isolation support."""
 
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
-            # Default to jarvis.db in the backend root
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            db_path = os.path.join(base_dir, "jarvis.db")
-        self.db_path = db_path
+            db_path = os.getenv("JARVIS_DB_PATH", os.path.join(base_dir, "jarvis.db"))
+        self._default_db_path = db_path
+        self._local = threading.local()
         self._init_tables()
 
-    def get_connection(self) -> sqlite3.Connection:
-        """Create and return a configured SQLite connection."""
+    @property
+    def db_path(self) -> str:
+        override = getattr(self._local, "db_path", None)
+        return override or self._default_db_path
+
+    @db_path.setter
+    def db_path(self, val: str) -> None:
+        self._default_db_path = val
+        self._init_tables()
+
+    def set_db_path(self, new_path: str) -> None:
+        """Switch default active database path and initialize schema tables."""
+        self._default_db_path = new_path
+        self._local.db_path = None
+        self._init_tables()
+
+    @contextmanager
+    def isolated_db(self, temp_path: str) -> Generator[None, None, None]:
+        """Context manager to route database operations in the current thread to a temporary DB."""
+        prev = getattr(self._local, "db_path", None)
+        self._local.db_path = temp_path
+        self._init_tables()
+        try:
+            yield
+        finally:
+            self._local.db_path = prev
+
+    @contextmanager
+    def get_connection(self) -> Generator[sqlite3.Connection, None, None]:
+        """Context manager yielding a configured SQLite connection that commits/rolls back and closes."""
         conn = sqlite3.connect(self.db_path, check_same_thread=False, timeout=30.0)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys = ON;")
         conn.execute("PRAGMA journal_mode = WAL;")
-        return conn
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
+    def _run_migrations(self, conn: sqlite3.Connection) -> None:
+        """Safe forward migrations for schema evolution."""
+        # 1. Check services table for dataset_id column
+        cur = conn.execute("PRAGMA table_info(services);")
+        columns = [row["name"] for row in cur.fetchall()]
+        if columns and "dataset_id" not in columns:
+            conn.execute("PRAGMA foreign_keys = OFF;")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS services_new (
+                    dataset_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    service_type TEXT,
+                    host TEXT,
+                    description TEXT,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY (dataset_id, name),
+                    FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
+                );
+            """)
+            ds_row = conn.execute("SELECT id FROM datasets ORDER BY created_at ASC LIMIT 1").fetchone()
+            default_ds = ds_row[0] if ds_row else "default"
+            conn.execute("""
+                INSERT OR IGNORE INTO services_new (dataset_id, name, service_type, host, description, created_at)
+                SELECT ?, name, service_type, host, description, created_at FROM services;
+            """, (default_ds,))
+            conn.execute("DROP TABLE services;")
+            conn.execute("ALTER TABLE services_new RENAME TO services;")
+            conn.execute("PRAGMA foreign_keys = ON;")
+
+        # 2. Check service_dependencies table for dataset_id column
+        cur_dep = conn.execute("PRAGMA table_info(service_dependencies);")
+        dep_cols = [row["name"] for row in cur_dep.fetchall()]
+        if dep_cols and "dataset_id" not in dep_cols:
+            conn.execute("PRAGMA foreign_keys = OFF;")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS service_dependencies_new (
+                    id TEXT PRIMARY KEY,
+                    dataset_id TEXT NOT NULL,
+                    source_service TEXT NOT NULL,
+                    target_service TEXT NOT NULL,
+                    dependency_type TEXT DEFAULT 'sync_http',
+                    latency_p95 REAL DEFAULT 0.0,
+                    error_rate REAL DEFAULT 0.0,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
+                );
+            """)
+            ds_row = conn.execute("SELECT id FROM datasets ORDER BY created_at ASC LIMIT 1").fetchone()
+            default_ds = ds_row[0] if ds_row else "default"
+            conn.execute("""
+                INSERT OR IGNORE INTO service_dependencies_new (id, dataset_id, source_service, target_service, dependency_type, latency_p95, error_rate, created_at)
+                SELECT ? || ':' || id, ?, source_service, target_service, dependency_type, latency_p95, error_rate, created_at FROM service_dependencies;
+            """, (default_ds, default_ds))
+            conn.execute("DROP TABLE service_dependencies;")
+            conn.execute("ALTER TABLE service_dependencies_new RENAME TO service_dependencies;")
+            conn.execute("PRAGMA foreign_keys = ON;")
 
     def _init_tables(self) -> None:
         """Create all required schema tables and indexes if they do not exist."""
@@ -125,23 +216,26 @@ class Database:
             );
 
             CREATE TABLE IF NOT EXISTS services (
-                name TEXT PRIMARY KEY,
+                dataset_id TEXT NOT NULL,
+                name TEXT NOT NULL,
                 service_type TEXT,
                 host TEXT,
                 description TEXT,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (dataset_id, name),
+                FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS service_dependencies (
                 id TEXT PRIMARY KEY,
+                dataset_id TEXT NOT NULL,
                 source_service TEXT NOT NULL,
                 target_service TEXT NOT NULL,
                 dependency_type TEXT DEFAULT 'sync_http',
                 latency_p95 REAL DEFAULT 0.0,
                 error_rate REAL DEFAULT 0.0,
                 created_at TEXT NOT NULL,
-                FOREIGN KEY (source_service) REFERENCES services(name) ON DELETE CASCADE,
-                FOREIGN KEY (target_service) REFERENCES services(name) ON DELETE CASCADE
+                FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS incidents (
@@ -255,6 +349,11 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_incident_events_incident ON incident_events(incident_id);
             CREATE INDEX IF NOT EXISTS idx_rca_incident ON root_cause_candidates(incident_id);
             CREATE INDEX IF NOT EXISTS idx_jobs_dataset ON analysis_jobs(dataset_id);
+            """)
+            self._run_migrations(conn)
+            conn.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_services_dataset ON services(dataset_id);
+            CREATE INDEX IF NOT EXISTS idx_dependencies_dataset ON service_dependencies(dataset_id);
             """)
 
 

@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 class ImpactAnalysisEngine:
     """Computes dependency blast radius and service impact metrics."""
 
-    def __init__(self, topo_graph: Optional[nx.DiGraph] = None):
-        self.topo_graph = topo_graph or self._build_graph()
+    def __init__(self, topo_graph: Optional[nx.DiGraph] = None, dataset_id: Optional[str] = None):
+        self.topo_graph = topo_graph or self._build_graph(dataset_id=dataset_id)
 
-    def _build_graph(self) -> nx.DiGraph:
-        graph_data = Repository.get_service_graph()
+    def _build_graph(self, dataset_id: Optional[str] = None) -> nx.DiGraph:
+        graph_data = Repository.get_service_graph(dataset_id=dataset_id)
         g = nx.DiGraph()
         for s in graph_data.get("services", []):
             g.add_node(s["name"], **s)
@@ -36,7 +36,10 @@ class ImpactAnalysisEngine:
         self,
         root_cause_service: str,
         incident_events: List[Dict[str, Any]],
+        dataset_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        if dataset_id:
+            self.topo_graph = self._build_graph(dataset_id=dataset_id)
         """Determine direct and downstream affected services and aggregate metrics."""
         direct_services: List[str] = [root_cause_service] if root_cause_service else []
         downstream_services: List[str] = []

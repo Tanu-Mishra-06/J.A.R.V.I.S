@@ -1,0 +1,4 @@
+timestamp,service_name,host_name,severity,message
+2023-01-01T12:00:00Z,auth-service,host-1,info,User login successful
+2023-01-01T12:01:30Z,order-service,host-2,error,Order processing failed
+2023-01-01T12:02:15Z,auth-service,host-1,warning,Multiple failed login attempts

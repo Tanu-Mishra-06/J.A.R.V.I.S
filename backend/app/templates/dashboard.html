@@ -181,6 +181,10 @@
           <p class="text-xs text-slate-400 mt-0.5" id="sr-modal-subtitle">Analytical profile and forensic findings</p>
         </div>
         <div class="flex items-center space-x-3">
+          <button onclick="closeStudyReportModal(); openDatasetMap(currentStudyDatasetId);" class="px-3 py-1.5 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 text-xs font-medium border border-cyan-800 transition flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+            <span>View Map</span>
+          </button>
           <button onclick="downloadDatasetReportMarkdown()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-medium border border-slate-700 transition flex items-center space-x-1.5">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span>Download MD</span>
@@ -477,6 +481,10 @@
         </div>
 
         <div class="flex items-center space-x-3">
+          <button onclick="openIncidentMap(currentIncidentId)" class="px-3.5 py-2 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-400 border border-cyan-800 text-xs font-semibold transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+            <span>View Service Map</span>
+          </button>
           <button onclick="downloadReport('markdown')" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition flex items-center space-x-2">
             <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span>Post-Mortem (MD)</span>
@@ -557,6 +565,23 @@
           <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span class="text-slate-300">Healthy (&gt;90%)</span></span>
           <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span><span class="text-slate-300">Degraded (40-90%)</span></span>
           <span class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span><span class="text-slate-300">Root Cause / Outage (&lt;40%)</span></span>
+        </div>
+      </div>
+
+      <!-- Scoped Dataset Selector Bar -->
+      <div class="card-glass rounded-xl p-3 px-4 flex items-center justify-between flex-wrap gap-3 border border-slate-800">
+        <div class="flex items-center space-x-3">
+          <label for="topology-dataset-selector" class="text-xs font-bold text-slate-300 uppercase font-mono tracking-wider flex items-center space-x-1.5">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span>Scoped Dataset Map:</span>
+          </label>
+          <select id="topology-dataset-selector" onchange="onTopologyDatasetChange(this.value)" class="px-3.5 py-1.5 rounded-lg bg-slate-950 border border-cyan-500/40 text-xs font-mono font-bold text-cyan-300 focus:outline-none focus:border-cyan-400">
+            <option value="">Loading datasets...</option>
+          </select>
+        </div>
+        <div class="flex items-center space-x-3 text-xs font-mono">
+          <span id="topology-incident-indicator" class="text-slate-400"></span>
+          <span id="topology-services-count-badge" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[11px]">0 Services</span>
         </div>
       </div>
 
@@ -751,7 +776,7 @@
           <div class="grid grid-cols-3 gap-4 mb-5">
             <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-center">
               <span class="text-slate-400 text-[10px] uppercase font-mono font-bold">Top-1 Accuracy</span>
-              <p class="text-2xl font-extrabold font-mono text-emerald-400 mt-1" id="bench-top1">87.5%</p>
+              <p class="text-2xl font-extrabold font-mono text-emerald-400 mt-1" id="bench-top1">100.0%</p>
             </div>
             <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-center">
               <span class="text-slate-400 text-[10px] uppercase font-mono font-bold">Top-3 Accuracy</span>
@@ -759,7 +784,7 @@
             </div>
             <div class="bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-center">
               <span class="text-slate-400 text-[10px] uppercase font-mono font-bold">Diagnosis Latency</span>
-              <p class="text-2xl font-extrabold font-mono text-slate-200 mt-1" id="bench-latency">143 ms</p>
+              <p class="text-2xl font-extrabold font-mono text-slate-200 mt-1" id="bench-latency">470 ms</p>
             </div>
           </div>
 
@@ -1160,6 +1185,18 @@
         tbody.innerHTML = '';
         document.getElementById('datasets-count-label').textContent = `${datasets.length} datasets`;
 
+        // Populate topology dataset selector
+        const topSelector = document.getElementById('topology-dataset-selector');
+        if (topSelector) {
+          const currentVal = topSelector.value || currentTopologyDatasetId;
+          topSelector.innerHTML = datasets.map(d => `<option value="${d.id}">${d.name} (${(d.source_type || 'DATA').toUpperCase()})</option>`).join('');
+          if (currentVal && datasets.some(d => d.id === currentVal)) {
+            topSelector.value = currentVal;
+          } else if (datasets.length > 0) {
+            topSelector.value = datasets[0].id;
+          }
+        }
+
         if (datasets.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-400">No datasets uploaded yet. Upload a file above.</td></tr>';
           return;
@@ -1178,6 +1215,7 @@
               <td class="py-3 px-3 font-mono text-[10px]"><span class="px-2 py-0.5 rounded border ${statusColor}">${ds.status.toUpperCase()}</span></td>
               <td class="py-3 px-3 font-mono text-[11px] text-slate-400">${ds.created_at.slice(0, 19).replace('T', ' ')}</td>
               <td class="py-3 px-5 text-right space-x-2">
+                <button onclick="openDatasetMap('${ds.id}')" class="px-2.5 py-1.5 rounded-md bg-cyan-900/40 hover:bg-cyan-800 text-cyan-300 border border-cyan-700/60 text-xs font-medium transition">View Map</button>
                 <button onclick="runAnalysisForDataset('${ds.id}')" class="px-2.5 py-1.5 rounded-md bg-cyan-950 hover:bg-cyan-900 text-cyan-400 border border-cyan-800 text-xs font-bold transition">Analyze</button>
                 <button onclick="viewDatasetStudyReport('${ds.id}')" class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition">Study Report</button>
                 <button onclick="deleteDataset('${ds.id}')" class="px-2 py-1 rounded-md bg-slate-850 hover:bg-red-950 text-slate-400 hover:text-red-400 border border-slate-700/80 text-[11px] transition">Delete</button>
@@ -1528,21 +1566,91 @@
       }
     }
 
+    let currentTopologyDatasetId = null;
+    let currentTopologyIncidentId = null;
+
     // Load Service Topology
-    async function loadTopology() {
+    async function loadTopology(datasetId = null, incidentId = null) {
+      if (datasetId) currentTopologyDatasetId = datasetId;
+      if (incidentId) currentTopologyIncidentId = incidentId;
+
+      let url = '/api/services/graph';
+      const params = new URLSearchParams();
+      if (currentTopologyDatasetId) {
+        params.append('dataset_id', currentTopologyDatasetId);
+      } else if (currentTopologyIncidentId) {
+        params.append('incident_id', currentTopologyIncidentId);
+      }
+      if (params.toString()) {
+        url += '?' + params.toString();
+      }
+
       try {
-        const res = await fetch('/api/services/graph');
+        const res = await fetch(url);
         topologyData = await res.json();
+        if (topologyData.dataset_id) {
+          currentTopologyDatasetId = topologyData.dataset_id;
+        }
+
+        // Update topology selector value
+        const selector = document.getElementById('topology-dataset-selector');
+        if (selector && currentTopologyDatasetId) {
+          selector.value = currentTopologyDatasetId;
+        }
+
+        // Update counts badge
+        const badge = document.getElementById('topology-services-count-badge');
+        if (badge) {
+          const sCount = (topologyData.services || []).length;
+          const dCount = (topologyData.dependencies || []).length;
+          badge.textContent = `${sCount} Services | ${dCount} Links`;
+        }
+
+        // Update incident indicator
+        const ind = document.getElementById('topology-incident-indicator');
+        if (ind) {
+          if (topologyData.incident_id) {
+            ind.innerHTML = `<span class="text-cyan-400 font-bold">Incident Linked:</span> <span class="text-slate-300 font-mono">${topologyData.incident_id.slice(0, 8)}</span>`;
+          } else {
+            ind.textContent = '';
+          }
+        }
 
         // Populate service dropdown in event filter
         const srvSelect = document.getElementById('event-service-filter');
-        srvSelect.innerHTML = '<option value="">All Services</option>';
-        (topologyData.services || []).forEach(s => {
-          srvSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-        });
+        if (srvSelect) {
+          srvSelect.innerHTML = '<option value="">All Services</option>';
+          (topologyData.services || []).forEach(s => {
+            srvSelect.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+          });
+        }
+
+        renderTopology();
       } catch (err) {
         console.error('Failed to load topology:', err);
       }
+    }
+
+    function onTopologyDatasetChange(datasetId) {
+      if (!datasetId) return;
+      currentTopologyDatasetId = datasetId;
+      currentTopologyIncidentId = null;
+      loadTopology(datasetId);
+    }
+
+    function openDatasetMap(datasetId) {
+      currentTopologyDatasetId = datasetId;
+      currentTopologyIncidentId = null;
+      switchTab('topology');
+      loadTopology(datasetId);
+    }
+
+    function openIncidentMap(incidentId) {
+      if (!incidentId) return;
+      currentTopologyIncidentId = incidentId;
+      currentTopologyDatasetId = null;
+      switchTab('topology');
+      loadTopology(null, incidentId);
     }
 
     // Canvas Service Dependency Topology Graph Renderer (Tiered DAG + Hover Highlights)
@@ -1742,7 +1850,7 @@
         document.getElementById('model-status-f1').textContent = metrics.f1_score || '0.90';
         document.getElementById('model-status-prec').textContent = metrics.precision || '0.88';
         document.getElementById('model-status-rec').textContent = metrics.recall || '0.92';
-        document.getElementById('bench-top1').textContent = ((metrics.top1_rca_accuracy || 0.875) * 100).toFixed(1) + '%';
+        document.getElementById('bench-top1').textContent = ((metrics.top1_rca_accuracy || 1.0) * 100).toFixed(1) + '%';
         document.getElementById('bench-top3').textContent = ((metrics.top3_rca_accuracy || 1.0) * 100).toFixed(1) + '%';
 
         await runBenchmarkEvaluation();

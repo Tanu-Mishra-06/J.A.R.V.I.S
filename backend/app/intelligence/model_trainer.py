@@ -7,8 +7,12 @@ and calculates genuine Precision, Recall, F1, and Top-1 / Top-3 RCA localization
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import shutil
+import tempfile
+import time
 import joblib
 import numpy as np
 from datetime import datetime, timezone
@@ -18,6 +22,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
 from app.database.repository import Repository
+from app.database.db import db
+from app.ingestion.processor import process_dataset
+from app.intelligence.orchestrator import AnalysisOrchestrator
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -30,6 +37,7 @@ class ModelTrainer:
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.models_dir = models_dir or os.path.join(base_dir, "models")
         os.makedirs(self.models_dir, exist_ok=True)
+        self.demo_dir = settings.DEMO_DIR
 
     def train_models(
         self,
@@ -37,29 +45,22 @@ class ModelTrainer:
         contamination: float = 0.08,
         n_estimators: int = 100,
     ) -> Dict[str, Any]:
-        """Train IsolationForest on all metric features from specified or available datasets."""
-        # Query metrics
-        metrics = []
-        if dataset_ids:
-            for d_id in dataset_ids:
-                metrics.extend(Repository.get_metrics(dataset_id=d_id, limit=5000))
-        else:
-            metrics = Repository.get_metrics(limit=10000)
-
-        if len(metrics) < 15:
-            # Generate representative baseline training samples across normal and degraded systems
-            np.random.seed(42)
-            n_samples = 400
-            # Features: [cpu_utilization, memory_utilization, latency_ms, error_rate, qps]
-            normal_data = np.random.normal(loc=[35.0, 50.0, 25.0, 0.01, 200.0], scale=[8.0, 5.0, 6.0, 0.005, 30.0], size=(360, 5))
-            anom_data = np.random.uniform(low=[85.0, 92.0, 1200.0, 0.25, 450.0], high=[100.0, 99.0, 5000.0, 0.85, 800.0], size=(40, 5))
-            X = np.vstack([normal_data, anom_data])
-            y_true = np.array([0] * 360 + [1] * 40)
-        else:
-            # Build feature matrix from collected metrics
-            values = [float(m["metric_value"]) for m in metrics]
-            X = np.array(values).reshape(-1, 1)
-            y_true = np.array([1 if m.get("is_anomaly") else 0 for m in metrics])
+        """Train IsolationForest on metric features and compute genuine validation metrics."""
+        # Baseline multi-feature telemetry validation matrix
+        # Features: [cpu_utilization, memory_utilization, latency_ms, error_rate, qps]
+        np.random.seed(42)
+        normal_data = np.random.normal(
+            loc=[35.0, 50.0, 25.0, 0.01, 200.0],
+            scale=[8.0, 5.0, 6.0, 0.005, 30.0],
+            size=(360, 5),
+        )
+        anom_data = np.random.uniform(
+            low=[85.0, 92.0, 1200.0, 0.25, 450.0],
+            high=[100.0, 99.0, 5000.0, 0.85, 800.0],
+            size=(40, 5),
+        )
+        X = np.vstack([normal_data, anom_data])
+        y_true = np.array([0] * 360 + [1] * 40)
 
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
@@ -71,7 +72,7 @@ class ModelTrainer:
         )
         model.fit(X_scaled)
 
-        # Predictions (-1 anomaly, 1 normal in sklearn)
+        # Predictions (-1 anomaly, 1 normal in scikit-learn)
         raw_preds = model.predict(X_scaled)
         y_pred = np.where(raw_preds == -1, 1, 0)
 
@@ -92,11 +93,9 @@ class ModelTrainer:
         }
 
         eval_metrics = {
-            "precision": round(prec if prec > 0 else 0.88, 3),
-            "recall": round(rec if rec > 0 else 0.92, 3),
-            "f1_score": round(f1 if f1 > 0 else 0.90, 3),
-            "top1_rca_accuracy": 0.875,
-            "top3_rca_accuracy": 0.965,
+            "precision": round(prec, 3),
+            "recall": round(rec, 3),
+            "f1_score": round(f1, 3),
             "confusion_matrix": cm,
             "evaluated_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -119,30 +118,154 @@ class ModelTrainer:
         }
 
     def evaluate_benchmark(self) -> Dict[str, Any]:
-        """Run benchmark evaluation against ground truth incident scenarios."""
-        # Ground truth benchmarks: OpenRCA2-Lite test scenarios
-        scenarios = [
-            {"id": "SCN-01", "name": "DB Connection Pool Exhaustion", "ground_truth": "database-primary", "predicted": ["database-primary", "auth-service", "api-gateway"]},
-            {"id": "SCN-02", "name": "Kubernetes Node OOM Killer", "ground_truth": "worker-node-01", "predicted": ["worker-node-01", "coredns", "ingress-nginx"]},
-            {"id": "SCN-03", "name": "Kafka Consumer Partition Lag", "ground_truth": "kafka-cluster", "predicted": ["kafka-cluster", "transcoder-worker", "video-ingest"]},
-            {"id": "SCN-04", "name": "CoreDNS Upstream Resolver Timeout", "ground_truth": "coredns", "predicted": ["coredns", "kube-apiserver", "api-gateway"]},
-            {"id": "SCN-05", "name": "Redis Cache Eviction Saturation", "ground_truth": "redis-cache", "predicted": ["order-service", "redis-cache", "api-gateway"]},
-            {"id": "SCN-06", "name": "HDFS DataNode Heartbeat Timeout", "ground_truth": "datanode-04", "predicted": ["datanode-04", "namenode-01", "spark-executor"]},
-            {"id": "SCN-07", "name": "Ingress SSL Handshake Deadlock", "ground_truth": "ingress-nginx", "predicted": ["ingress-nginx", "auth-service", "user-service"]},
-            {"id": "SCN-08", "name": "Postgres Shared Buffer Contention", "ground_truth": "database-primary", "predicted": ["database-primary", "order-service", "inventory-service"]},
-        ]
+        """Run benchmark evaluation against real ground-truth incident scenarios in an isolated DB.
 
-        top1_hits = sum(1 for s in scenarios if s["ground_truth"] == s["predicted"][0])
-        top3_hits = sum(1 for s in scenarios if s["ground_truth"] in s["predicted"][:3])
+        Loads scenario definitions from openrca_ground_truth.json, executes the
+        real ingestion and AnalysisOrchestrator pipeline inside a temporary database,
+        and computes genuine Top-1 / Top-3 accuracy and measured diagnosis latencies.
+        Never pollutes or modifies the active jarvis.db.
+        """
+        gt_file = os.path.join(self.demo_dir, "openrca_ground_truth.json")
+        if not os.path.exists(gt_file):
+            logger.error("Ground truth file not found: %s", gt_file)
+            return {
+                "total_benchmark_scenarios": 0,
+                "top1_accuracy": 0.0,
+                "top3_accuracy": 0.0,
+                "mean_time_to_diagnose_ms": 0.0,
+                "scenarios": [],
+                "error": f"Ground truth benchmark file not found: {gt_file}",
+            }
 
-        top1_acc = round(top1_hits / len(scenarios), 3)
-        top3_acc = round(top3_hits / len(scenarios), 3)
+        with open(gt_file, "r", encoding="utf-8") as f:
+            gt_data = json.load(f)
+
+        scenario_defs = gt_data.get("scenarios", [])
+        results: List[Dict[str, Any]] = []
+        latencies_ms: List[float] = []
+
+        temp_dir = tempfile.mkdtemp()
+        temp_db_path = os.path.join(temp_dir, "benchmark_eval.db")
+
+        try:
+            with db.isolated_db(temp_db_path):
+                for scn in scenario_defs:
+                    scn_id = scn.get("incident_id")
+                    scn_name = scn.get("name", scn.get("domain", scn_id))
+                    expected_rc = scn.get("ground_truth_root_cause")
+
+                    # 1. Ingest Logs
+                    logs_file = scn.get("logs_file")
+                    if not logs_file:
+                        continue
+
+                    logs_path = os.path.join(self.demo_dir, logs_file)
+                    if not os.path.exists(logs_path):
+                        logger.warning("Logs file missing for %s: %s", scn_id, logs_path)
+                        continue
+
+                    _, ext = os.path.splitext(logs_file.lower())
+                    src_type = ext.replace(".", "") if ext else "jsonl"
+
+                    logs_ds = Repository.create_dataset(
+                        name=f"Benchmark {scn_name} Logs",
+                        description=f"Evaluation dataset for {scn_id}",
+                        source_type=src_type,
+                        file_path=logs_path,
+                        metadata={"benchmark_id": scn_id},
+                        is_demo=False,
+                    )
+                    ds_id = logs_ds["id"]
+                    process_dataset(ds_id)
+
+                    # 2. Register Topology dependencies if available (scoped to ds_id)
+                    topo_file = scn.get("topology_file")
+                    if topo_file:
+                        topo_path = os.path.join(self.demo_dir, topo_file)
+                        if os.path.exists(topo_path):
+                            try:
+                                with open(topo_path, "r", encoding="utf-8") as tf:
+                                    topo = json.load(tf)
+                                    for s in topo.get("services", []):
+                                        Repository.upsert_service(
+                                            s["name"],
+                                            dataset_id=ds_id,
+                                            service_type=s.get("type", "service"),
+                                            host=s.get("host"),
+                                            description=s.get("description"),
+                                        )
+                                    for d in topo.get("dependencies", []):
+                                        Repository.upsert_dependency(
+                                            d["source"],
+                                            d["target"],
+                                            dataset_id=ds_id,
+                                            latency=d.get("latency_p95", 10.0),
+                                        )
+                            except Exception as e:
+                                logger.warning("Error loading topology for %s: %s", scn_id, e)
+
+                    # 3. Ingest Metrics if available
+                    metrics_file = scn.get("metrics_file")
+                    if metrics_file:
+                        metrics_path = os.path.join(self.demo_dir, metrics_file)
+                        if os.path.exists(metrics_path):
+                            metrics_ds = Repository.create_dataset(
+                                name=f"Benchmark {scn_name} Metrics",
+                                description=f"Metrics dataset for {scn_id}",
+                                source_type="csv",
+                                file_path=metrics_path,
+                                metadata={"benchmark_id": scn_id},
+                                is_demo=False,
+                            )
+                            process_dataset(metrics_ds["id"])
+
+                    # 4. Execute Analysis Pipeline & Measure Latency
+                    job_id = Repository.create_analysis_job(logs_ds["id"])
+                    t0 = time.perf_counter()
+                    AnalysisOrchestrator.run_pipeline(logs_ds["id"], job_id)
+                    t1 = time.perf_counter()
+                    elapsed_ms = (t1 - t0) * 1000.0
+                    latencies_ms.append(elapsed_ms)
+
+                    # 5. Extract RCA predictions
+                    job = Repository.get_analysis_job(job_id)
+                    inc_ids = job.get("result", {}).get("incident_ids", []) if job else []
+                    predicted_services: List[str] = []
+                    candidates: List[Dict[str, Any]] = []
+
+                    if inc_ids:
+                        candidates = Repository.get_root_cause_candidates(inc_ids[0])
+                        predicted_services = [c["service_name"] for c in candidates]
+
+                    top1_correct = bool(predicted_services and predicted_services[0] == expected_rc)
+                    top3_correct = bool(expected_rc in predicted_services[:3])
+
+                    results.append({
+                        "id": scn_id,
+                        "name": scn_name,
+                        "domain": scn.get("domain", "Distributed Systems"),
+                        "expected": expected_rc,
+                        "ground_truth": expected_rc,
+                        "predicted": predicted_services,
+                        "correct": top1_correct,
+                        "top1_correct": top1_correct,
+                        "top3_correct": top3_correct,
+                        "confidence_score": candidates[0]["confidence_score"] if candidates else 0.0,
+                        "latency_ms": round(elapsed_ms, 1),
+                    })
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        total = len(results)
+        top1_acc = round(sum(1 for r in results if r["top1_correct"]) / total, 3) if total else 0.0
+        top3_acc = round(sum(1 for r in results if r["top3_correct"]) / total, 3) if total else 0.0
+        mean_latency = round(sum(latencies_ms) / len(latencies_ms), 1) if latencies_ms else 0.0
 
         return {
-            "total_benchmark_scenarios": len(scenarios),
+            "total_benchmark_scenarios": total,
             "top1_accuracy": top1_acc,
             "top3_accuracy": top3_acc,
-            "mean_time_to_diagnose_ms": 142.5,
-            "scenarios": scenarios,
-            "evaluation_standard": "OpenRCA2-Lite / AIOps Challenge Standard RCA Localization Metric",
+            "mean_time_to_diagnose_ms": mean_latency,
+            "scenarios": results,
+            "evaluation_standard": "OpenRCA2-Lite Standard Ground-Truth Benchmark",
         }
